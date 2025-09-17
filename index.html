@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Table to Arrow Diagram Animation</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <h1>Indian Judicial System - Entity Relationship Diagram</h1>
+        
+        <div class="controls">
+            <button id="animateBtn">Animate to Arrow Diagram</button>
+            <button id="resetBtn">Reset to Table</button>
+        </div>
+        
+        <div class="visualization-container">
+            <!-- Table View -->
+            <div id="table-view" class="view active">
+                <table id="data-table">
+                    <thead>
+                        <tr>
+                            <th>Entity</th>
+                            <th>Relationship</th>
+                            <th>Target</th>
+                        </tr>
+                    </thead>
+                    <tbody id="table-body">
+                        <!-- Data will be populated by JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Arrow Diagram View -->
+            <div id="diagram-view" class="view">
+                <svg id="arrow-diagram"></svg>
+            </div>
+        </div>
+    </div>
+    
+    <script src="script.js"></script>
+</body>
+</html>
