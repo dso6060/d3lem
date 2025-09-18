@@ -12,7 +12,7 @@ body {
 }
 
 .container {
-    max-width: 1000px;
+    max-width: 1400px;
     margin: 0 auto;
     padding: 20px;
 }
@@ -21,13 +21,82 @@ h1 {
     text-align: center;
     font-size: 24px;
     font-weight: 300;
-    margin-bottom: 20px;
+    margin-bottom: 10px;
     color: #333;
+}
+
+.description {
+    text-align: center;
+    font-size: 14px;
+    color: #666;
+    margin-bottom: 15px;
+    font-style: italic;
+}
+
+.legend {
+    display: flex;
+    justify-content: center;
+    gap: 30px;
+    margin-bottom: 20px;
+    padding: 10px;
+    background: #f8f9fa;
+    border-radius: 5px;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: 500;
+}
+
+.legend-color {
+    width: 20px;
+    height: 3px;
+    border-radius: 2px;
+}
+
+.legend-color.outgoing {
+    background-color: #1f77b4;
+}
+
+.legend-color.incoming {
+    background-color: #d62728;
 }
 
 .controls {
     text-align: center;
     margin-bottom: 20px;
+}
+
+.filter-controls {
+    margin-top: 15px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.filter-controls label {
+    font-weight: 500;
+    color: #333;
+}
+
+.filter-controls select {
+    padding: 6px 12px;
+    border: 1px solid #ddd;
+    border-radius: 3px;
+    font-size: 14px;
+    background: white;
+    min-width: 200px;
+}
+
+.filter-controls select:focus {
+    outline: none;
+    border-color: #1f77b4;
+    box-shadow: 0 0 0 2px rgba(31, 119, 180, 0.2);
 }
 
 button {
@@ -58,7 +127,8 @@ button:disabled {
 
 .visualization-container {
     position: relative;
-    min-height: 500px;
+    min-height: 700px;
+    height: 900px;
     border: 1px solid #ddd;
     background: #fff;
 }
@@ -138,27 +208,46 @@ button:disabled {
     pointer-events: none;
 }
 
-/* Link styles */
+/* Link styles - Simplified to 2 colors for directionality */
 .link {
     fill: none;
-    stroke-width: 1.5px;
+    stroke-width: 2px;
 }
 
-.link.orange {
-    stroke: #ff7f0e;
+.link.outgoing {
+    stroke: #1f77b4;  /* Blue for outgoing relationships */
 }
 
-.link.green {
-    stroke: #2ca02c;
-}
-
-.link.blue {
-    stroke: #1f77b4;
+.link.incoming {
+    stroke: #d62728;  /* Red for incoming relationships */
 }
 
 /* Arrow marker */
 .arrow-marker {
     fill: #999;
+}
+
+/* Relationship label styles */
+.relationship-label-group {
+    pointer-events: none;
+}
+
+.relationship-label-group rect {
+    fill: rgba(255, 255, 255, 0.95);
+    stroke: #333;
+    stroke-width: 2;
+    rx: 4;
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
+}
+
+.relationship-label-group text {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-size: 12px;
+    font-weight: bold;
+    fill: #000;
+    text-anchor: middle;
+    dominant-baseline: central;
+    pointer-events: none;
 }
 
 /* Animation classes */
@@ -189,8 +278,20 @@ button:disabled {
 }
 
 /* Responsive design */
+@media (max-width: 1200px) {
+    .container {
+        max-width: 1000px;
+        padding: 15px;
+    }
+    
+    .visualization-container {
+        height: 700px;
+    }
+}
+
 @media (max-width: 768px) {
     .container {
+        max-width: 100%;
         padding: 10px;
     }
     
@@ -199,7 +300,8 @@ button:disabled {
     }
     
     .visualization-container {
-        min-height: 400px;
+        min-height: 500px;
+        height: 600px;
     }
     
     #data-table {

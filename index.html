@@ -3,22 +3,45 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Table to Arrow Diagram Animation</title>
+    <title>Comprehensive Legal System - Interactive Network Diagram</title>
     <link rel="stylesheet" href="style.css">
     <script src="https://d3js.org/d3.v7.min.js"></script>
 </head>
 <body>
     <div class="container">
-        <h1>Indian Judicial System - Entity Relationship Diagram</h1>
+        <h1>Comprehensive Legal System - Interactive Network Diagram</h1>
+        <p class="description">Explore the complex relationships between Parliament, Courts, Tribunals, Arbitration Centers, and Legal Professionals in the Indian legal ecosystem.</p>
+        
+        <div class="legend">
+            <div class="legend-item">
+                <div class="legend-color outgoing"></div>
+                <span>Outgoing Relationships (Blue)</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color incoming"></div>
+                <span>Incoming Relationships (Red)</span>
+            </div>
+        </div>
         
         <div class="controls">
-            <button id="animateBtn">Animate to Arrow Diagram</button>
-            <button id="resetBtn">Reset to Table</button>
+            <button id="toggleViewBtn">Show Table View</button>
+            <div class="filter-controls">
+                <label for="nodeFilter">Filter by Entity:</label>
+                <select id="nodeFilter">
+                    <option value="">Show All Entities</option>
+                </select>
+                <button id="clearFilter">Clear Filter</button>
+            </div>
         </div>
         
         <div class="visualization-container">
+            <!-- Arrow Diagram View (Default) -->
+            <div id="diagram-view" class="view active">
+                <svg id="arrow-diagram"></svg>
+            </div>
+            
             <!-- Table View -->
-            <div id="table-view" class="view active">
+            <div id="table-view" class="view">
                 <table id="data-table">
                     <thead>
                         <tr>
@@ -32,14 +55,13 @@
                     </tbody>
                 </table>
             </div>
-            
-            <!-- Arrow Diagram View -->
-            <div id="diagram-view" class="view">
-                <svg id="arrow-diagram"></svg>
-            </div>
         </div>
     </div>
     
-    <script src="script.js"></script>
+    <!-- Modular JavaScript files -->
+    <script src="data-simple.js?v=8"></script>
+    <script src="utils.js?v=8"></script>
+    <script src="visualization.js?v=8"></script>
+    <script src="app.js?v=8"></script>
 </body>
 </html>
