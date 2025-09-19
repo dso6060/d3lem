@@ -14,7 +14,7 @@ body {
 .container {
     max-width: 1400px;
     margin: 0 auto;
-    padding: 20px;
+    padding: 15px;
 }
 
 h1 {
@@ -29,7 +29,7 @@ h1 {
     text-align: center;
     font-size: 14px;
     color: #666;
-    margin-bottom: 15px;
+    margin-bottom: 10px;
     font-style: italic;
 }
 
@@ -67,11 +67,11 @@ h1 {
 
 .controls {
     text-align: center;
-    margin-bottom: 20px;
+    margin-bottom: 10px;
 }
 
 .filter-controls {
-    margin-top: 15px;
+    margin-top: 8px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -98,6 +98,93 @@ h1 {
     border-color: #1f77b4;
     box-shadow: 0 0 0 2px rgba(31, 119, 180, 0.2);
 }
+
+.group-controls {
+    margin-top: 8px;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.group-controls label {
+    font-weight: 500;
+    color: #333;
+    margin-bottom: 5px;
+    display: block;
+}
+
+.group-checkboxes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    max-width: 800px;
+    justify-content: center;
+}
+
+.checkbox-group {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: #f8f9fa;
+    padding: 6px 12px;
+    border-radius: 4px;
+    border: 1px solid #e9ecef;
+    transition: background-color 0.2s ease;
+}
+
+.checkbox-group:hover {
+    background: #e9ecef;
+}
+
+.checkbox-group input[type="checkbox"] {
+    margin: 0;
+    cursor: pointer;
+}
+
+.checkbox-group label {
+    margin: 0;
+    font-size: 13px;
+    font-weight: 400;
+    color: #333;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+/* Group-specific label colors matching node colors */
+.checkbox-group input[value=":LegislativeAndRegulatory"] + label {
+    color: #2E8B57; /* Sea Green */
+}
+
+.checkbox-group input[value=":JudiciaryGroup"] + label {
+    color: #4169E1; /* Royal Blue */
+}
+
+.checkbox-group input[value=":TribunalsAndArbitrationGroup"] + label {
+    color: #FF6347; /* Tomato */
+}
+
+.checkbox-group input[value=":PeopleAndOfficeholdersGroup"] + label {
+    color: #9370DB; /* Medium Purple */
+}
+
+.checkbox-group input[value=":LegalFrameworkGroup"] + label {
+    color: #20B2AA; /* Light Sea Green */
+}
+
+.checkbox-group input[value=":NonAdministrativeEntitiesGroup"] + label {
+    color: #DAA520; /* Goldenrod */
+}
+
+.checkbox-group input[value=":EnforcementGroup"] + label {
+    color: #DC143C; /* Crimson */
+}
+
+.checkbox-group input[value=":CaseTypesGroup"] + label {
+    color: #FF8C00; /* Dark Orange */
+}
+
 
 button {
     background: #1f77b4;
@@ -315,6 +402,25 @@ button:disabled {
     
     button {
         padding: 6px 12px;
+        font-size: 12px;
+    }
+    
+    .group-controls {
+        flex-direction: column;
+        align-items: center;
+        gap: 10px;
+    }
+    
+    .group-checkboxes {
+        max-width: 100%;
+        justify-content: center;
+    }
+    
+    .checkbox-group {
+        padding: 4px 8px;
+    }
+    
+    .checkbox-group label {
         font-size: 12px;
     }
 }

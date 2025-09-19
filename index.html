@@ -12,26 +12,53 @@
         <h1>Comprehensive Legal System - Interactive Network Diagram</h1>
         <p class="description">Explore the complex relationships between Parliament, Courts, Tribunals, Arbitration Centers, and Legal Professionals in the Indian legal ecosystem.</p>
         
-        <div class="legend">
-            <div class="legend-item">
-                <div class="legend-color outgoing"></div>
-                <span>Outgoing Relationships (Blue)</span>
-            </div>
-            <div class="legend-item">
-                <div class="legend-color incoming"></div>
-                <span>Incoming Relationships (Red)</span>
-            </div>
-        </div>
         
         <div class="controls">
-            <button id="toggleViewBtn">Show Table View</button>
-            <button id="groupBtn">Group Nodes</button>
             <div class="filter-controls">
                 <label for="nodeFilter">Filter by Entity:</label>
                 <select id="nodeFilter">
                     <option value="">Show All Entities</option>
                 </select>
                 <button id="clearFilter">Clear Filter</button>
+                <button id="toggleViewBtn">Network View</button>
+                <button id="groupBtn">Group Nodes</button>
+            </div>
+            <div class="group-controls">
+                <label for="groupFilter">Show/Hide Groups:</label>
+                <div class="group-checkboxes">
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="group-legislative" value=":LegislativeAndRegulatory" checked>
+                        <label for="group-legislative">Legislative & Regulatory</label>
+                    </div>
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="group-judiciary" value=":JudiciaryGroup" checked>
+                        <label for="group-judiciary">Judiciary</label>
+                    </div>
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="group-tribunals" value=":TribunalsAndArbitrationGroup" checked>
+                        <label for="group-tribunals">Tribunals & Arbitration</label>
+                    </div>
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="group-people" value=":PeopleAndOfficeholdersGroup" checked>
+                        <label for="group-people">People & Officeholders</label>
+                    </div>
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="group-legal" value=":LegalFrameworkGroup" checked>
+                        <label for="group-legal">Legal Framework</label>
+                    </div>
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="group-nonadmin" value=":NonAdministrativeEntitiesGroup" checked>
+                        <label for="group-nonadmin">Constitutional Authorities</label>
+                    </div>
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="group-enforcement" value=":EnforcementGroup" checked>
+                        <label for="group-enforcement">Enforcement</label>
+                    </div>
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="group-cases" value=":CaseTypesGroup" checked>
+                        <label for="group-cases">Case Types</label>
+                    </div>
+                </div>
             </div>
         </div>
         
@@ -46,9 +73,9 @@
                 <table id="data-table">
                     <thead>
                         <tr>
-                            <th>Entity</th>
+                            <th>From Entity</th>
                             <th>Relationship</th>
-                            <th>Target</th>
+                            <th>To Entity</th>
                         </tr>
                     </thead>
                     <tbody id="table-body">

@@ -124,7 +124,7 @@ function showTableView() {
     
     const toggleBtn = document.getElementById("toggleViewBtn");
     toggleBtn.disabled = true;
-    toggleBtn.textContent = "Show Diagram View";
+    toggleBtn.textContent = "Network View";
     
     const tableView = document.getElementById("table-view");
     const diagramView = document.getElementById("diagram-view");
@@ -254,6 +254,11 @@ function clearNodeFilter() {
 document.addEventListener('DOMContentLoaded', function() {
     // Initialize the application
     init();
+    
+    // Setup group filter listeners after a short delay to ensure DOM is ready
+    setTimeout(() => {
+        setupGroupFilterListeners();
+    }, 100);
 });
 
 /**
@@ -287,3 +292,60 @@ window.clearNodeFilter = () => {
     }
     visualization.clearNodeFilter();
 };
+
+/**
+ * Group Filtering Functions
+ */
+
+// Setup group filter event listeners
+function setupGroupFilterListeners() {
+    // Add event listeners to all group checkboxes
+    const groupCheckboxes = document.querySelectorAll('.group-controls input[type="checkbox"]');
+    console.log('Found group checkboxes:', groupCheckboxes.length);
+    
+    groupCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', handleGroupFilterChange);
+        console.log('Added event listener to checkbox:', checkbox.value);
+    });
+    
+}
+
+// Handle individual group checkbox changes
+function handleGroupFilterChange(event) {
+    if (!isInitialized || !visualization) {
+        console.warn('Visualization not initialized yet');
+        return;
+    }
+    
+    const groupId = event.target.value;
+    const isChecked = event.target.checked;
+    
+    console.log(`Group ${groupId} ${isChecked ? 'enabled' : 'disabled'}`);
+    
+    // Apply group filter
+    applyGroupFilter();
+}
+
+// Apply group filter based on current checkbox states
+function applyGroupFilter() {
+    if (!isInitialized || !visualization) {
+        console.warn('Visualization not initialized yet');
+        return;
+    }
+    
+    // Get all checked groups
+    const checkedGroups = [];
+    const groupCheckboxes = document.querySelectorAll('.group-controls input[type="checkbox"]:checked');
+    groupCheckboxes.forEach(checkbox => {
+        checkedGroups.push(checkbox.value);
+    });
+    
+    console.log('Active groups:', checkedGroups);
+    
+    // Apply filter to visualization
+    visualization.filterNodesByGroups(checkedGroups);
+}
+
+
+// Global event handlers for group filtering
+window.handleGroupFilterChange = handleGroupFilterChange;

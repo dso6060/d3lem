@@ -86,6 +86,9 @@ class LegalSystemVisualization {
         // Restore normal view (clears all highlighting)
         this.restoreNormalView();
         
+        // Restore group filtering if it was active
+        this.restoreGroupFiltering();
+        
         // Clear selection state
         this.svg.attr("data-selected-node", null);
         
@@ -437,7 +440,8 @@ class LegalSystemVisualization {
     dragstarted(event, d) {
         event.sourceEvent.preventDefault();
         
-        if (this.filteredNodeId) {
+        // Only clear node filter if group filtering is not active
+        if (this.filteredNodeId && !this.isGroupFilterActive()) {
             this.clearNodeFilter();
         }
         
@@ -467,7 +471,10 @@ class LegalSystemVisualization {
         d.fx = d.x;
         d.fy = d.y;
         
-        this.highlightSelectedNode(d);
+        // Only highlight if group filtering is not active
+        if (!this.isGroupFilterActive()) {
+            this.highlightSelectedNode(d);
+        }
         
         setTimeout(() => {
             this.showNodeRelationshipLabels(d);
@@ -541,7 +548,10 @@ class LegalSystemVisualization {
         
         delete d._connectedNodes;
         
-        this.removeHighlighting();
+        // Always restore the proper view state after drag ends with a small delay
+        setTimeout(() => {
+            this.restoreViewAfterDrag();
+        }, 50);
         
         // Keep labels visible after drag ends - they'll be hidden when mouse leaves
         // setTimeout(() => {
@@ -754,7 +764,7 @@ class LegalSystemVisualization {
         
         const toggleBtn = document.getElementById("toggleViewBtn");
         toggleBtn.disabled = true;
-        toggleBtn.textContent = "Show Table View";
+        toggleBtn.textContent = "Table View";
         
         const tableView = document.getElementById("table-view");
         const diagramView = document.getElementById("diagram-view");
@@ -826,7 +836,10 @@ class LegalSystemVisualization {
         tableBody.selectAll("tr").remove();
         
         // Get filtered data if filter is active
-        const dataToShow = window.helpers.getFilteredTableData(this.judicialEntityMapData, this.filteredNodeId);
+        let dataToShow = window.helpers.getFilteredTableData(this.judicialEntityMapData, this.filteredNodeId);
+        
+        // Apply group filter if active
+        dataToShow = this.applyGroupFilterToTableData(dataToShow);
         
         // Create rows for each relationship
         const rows = tableBody.selectAll("tr")
@@ -845,6 +858,34 @@ class LegalSystemVisualization {
             row.append("td").text(d.source);
             row.append("td").text(d.label);
             row.append("td").text(d.target);
+        });
+    }
+
+    // Apply group filter to table data
+    applyGroupFilterToTableData(data) {
+        // Get active groups from checkboxes
+        const checkedGroups = [];
+        const groupCheckboxes = document.querySelectorAll('.group-controls input[type="checkbox"]:checked');
+        groupCheckboxes.forEach(checkbox => {
+            checkedGroups.push(checkbox.value);
+        });
+
+        // If no groups are selected, return empty array
+        if (checkedGroups.length === 0) {
+            return [];
+        }
+
+        // Get nodes that belong to active groups
+        const activeNodeIds = new Set();
+        this.groupingData.forEach(item => {
+            if (checkedGroups.includes(item.belongsTo)) {
+                activeNodeIds.add(item.node);
+            }
+        });
+
+        // Filter data to only include relationships where both source and target are in active groups
+        return data.filter(d => {
+            return activeNodeIds.has(d.source) && activeNodeIds.has(d.target);
         });
     }
 
@@ -1124,7 +1165,7 @@ class LegalSystemVisualization {
         
         const toggleBtn = document.getElementById("toggleViewBtn");
         toggleBtn.disabled = true;
-        toggleBtn.textContent = "Show Diagram View";
+        toggleBtn.textContent = "Network View";
         
         const tableView = document.getElementById("table-view");
         const diagramView = document.getElementById("diagram-view");
@@ -1212,6 +1253,147 @@ class LegalSystemVisualization {
         this.setupTable();
     }
 
+    // Filter nodes by groups
+    filterNodesByGroups(activeGroups) {
+        console.log('filterNodesByGroups called with:', activeGroups);
+        
+        if (!this.nodeElements || !this.linkElements) {
+            console.warn('Node or link elements not available');
+            return;
+        }
+
+        // If no groups are selected, hide all nodes
+        if (activeGroups.length === 0) {
+            console.log('No groups selected, hiding all nodes');
+            this.nodeElements.style("opacity", 0);
+            this.linkElements.style("opacity", 0);
+            return;
+        }
+
+        // Get nodes that belong to active groups
+        const activeNodeIds = new Set();
+        this.groupingData.forEach(item => {
+            if (activeGroups.includes(item.belongsTo)) {
+                activeNodeIds.add(item.node);
+            }
+        });
+
+        console.log('Active node IDs:', Array.from(activeNodeIds));
+
+        // Filter nodes based on group membership
+        this.nodeElements.style("opacity", d => {
+            const isVisible = activeNodeIds.has(d.id);
+            if (!isVisible) {
+                console.log(`Hiding node: ${d.id}`);
+            }
+            return isVisible ? 1 : 0;
+        });
+
+        // Filter links based on whether both source and target nodes are visible
+        this.linkElements.style("opacity", d => {
+            const sourceVisible = activeNodeIds.has(d.source.id || d.source);
+            const targetVisible = activeNodeIds.has(d.target.id || d.target);
+            return (sourceVisible && targetVisible) ? 1 : 0;
+        });
+
+        // Update table to show only filtered data
+        this.setupTable();
+
+        console.log(`Filtered to show ${activeNodeIds.size} nodes from ${activeGroups.length} groups`);
+    }
+
+    // Check if group filtering is currently active
+    isGroupFilterActive() {
+        const groupCheckboxes = document.querySelectorAll('.group-controls input[type="checkbox"]');
+        const totalGroups = groupCheckboxes.length;
+        const checkedGroups = document.querySelectorAll('.group-controls input[type="checkbox"]:checked').length;
+        
+        // Group filtering is active if not all groups are checked
+        return checkedGroups < totalGroups;
+    }
+
+    // Restore group filtering after clearing highlights
+    restoreGroupFiltering() {
+        if (this.isGroupFilterActive()) {
+            // Get all checked groups
+            const checkedGroups = [];
+            const groupCheckboxes = document.querySelectorAll('.group-controls input[type="checkbox"]:checked');
+            groupCheckboxes.forEach(checkbox => {
+                checkedGroups.push(checkbox.value);
+            });
+            
+            // Reapply group filter
+            this.filterNodesByGroups(checkedGroups);
+        }
+    }
+
+    // Restore proper view state after drag ends
+    restoreViewAfterDrag() {
+        console.log('restoreViewAfterDrag called');
+        
+        // If group filtering is active, restore group filtering
+        if (this.isGroupFilterActive()) {
+            console.log('Group filtering is active, restoring group filtering');
+            this.restoreGroupFiltering();
+        } else {
+            console.log('No group filtering, restoring normal highlighting');
+            // If no group filtering, restore normal highlighting state
+            this.removeHighlighting();
+        }
+        
+        // Ensure all elements are properly visible
+        if (this.nodeElements && this.linkElements) {
+            // Force a re-render to ensure elements are visible
+            this.nodeElements.style("opacity", d => {
+                // If group filtering is active, use group filter logic
+                if (this.isGroupFilterActive()) {
+                    const checkedGroups = [];
+                    const groupCheckboxes = document.querySelectorAll('.group-controls input[type="checkbox"]:checked');
+                    groupCheckboxes.forEach(checkbox => {
+                        checkedGroups.push(checkbox.value);
+                    });
+                    
+                    const activeNodeIds = new Set();
+                    this.groupingData.forEach(item => {
+                        if (checkedGroups.includes(item.belongsTo)) {
+                            activeNodeIds.add(item.node);
+                        }
+                    });
+                    
+                    return activeNodeIds.has(d.id) ? 1 : 0;
+                } else {
+                    // No group filtering, show all nodes
+                    return 1;
+                }
+            });
+            
+            this.linkElements.style("opacity", d => {
+                // If group filtering is active, use group filter logic
+                if (this.isGroupFilterActive()) {
+                    const checkedGroups = [];
+                    const groupCheckboxes = document.querySelectorAll('.group-controls input[type="checkbox"]:checked');
+                    groupCheckboxes.forEach(checkbox => {
+                        checkedGroups.push(checkbox.value);
+                    });
+                    
+                    const activeNodeIds = new Set();
+                    this.groupingData.forEach(item => {
+                        if (checkedGroups.includes(item.belongsTo)) {
+                            activeNodeIds.add(item.node);
+                        }
+                    });
+                    
+                    const sourceVisible = activeNodeIds.has(d.source.id || d.source);
+                    const targetVisible = activeNodeIds.has(d.target.id || d.target);
+                    return (sourceVisible && targetVisible) ? 1 : 0;
+                } else {
+                    // No group filtering, show all links
+                    return 1;
+                }
+            });
+        }
+    }
+
     // Highlighting functions for selected node and connections
     highlightSelectedNode(selectedNode) {
         // First, dim all elements
@@ -1284,6 +1466,11 @@ class LegalSystemVisualization {
     }
 
     removeHighlighting() {
+        // Don't remove highlighting if group filtering is active
+        if (this.isGroupFilterActive()) {
+            return;
+        }
+        
         // Reset all elements to normal state
         this.nodeElements
             .style("opacity", 1)
@@ -1773,6 +1960,11 @@ class LegalSystemVisualization {
             return;
         }
         
+        // Don't apply hover effects if group filtering is active
+        if (this.isGroupFilterActive()) {
+            return;
+        }
+        
         // Find all connected node IDs
         const connectedNodeIds = new Set();
         connectedNodeIds.add(hoveredNode.id);
@@ -1814,6 +2006,11 @@ class LegalSystemVisualization {
     restoreNormalView() {
         // Don't restore if a filter is active
         if (this.filteredNodeId) {
+            return;
+        }
+        
+        // Don't restore if group filtering is active
+        if (this.isGroupFilterActive()) {
             return;
         }
         
