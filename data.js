@@ -32,8 +32,6 @@ const groupingData = [
     { node: "Laws governing Arbitration", label: ":LegalProcedure", belongsTo: ":LegalFrameworkGroup" },
     { node: "Sponsoring Ministry", label: ":RegulatoryBody", belongsTo: ":LegislativeAndRegulatory" },
     { node: "National Tribunals Commission", label: ":RegulatoryBody", belongsTo: ":LegislativeAndRegulatory" },
-    { node: "CPC", label: ":LegalProcedure", belongsTo: ":LegalFrameworkGroup" },
-    { node: "CrPC", label: ":LegalProcedure", belongsTo: ":LegalFrameworkGroup" },
     { node: "District Judges", label: ":People", belongsTo: ":PeopleAndOfficeholdersGroup" },
     { node: "Subordinate Officers", label: ":People", belongsTo: ":PeopleAndOfficeholdersGroup" },
     
@@ -155,13 +153,13 @@ const judicialEntityMapData = [
     // Judicial Officers relationships
     { source: "Judicial Officers", target: "Subordinate Courts", count: 1, label: "administer" },
     { source: "Judicial Officers", target: "High Courts", count: 1, label: "regulated_by" },
-    { source: "Judicial Officers", target: "CPC", count: 1, label: "regulated_by" },
-    { source: "Judicial Officers", target: "CrPC", count: 1, label: "regulated_by" },
+    { source: "Judicial Officers", target: "Civil Procedure Code", count: 1, label: "regulated_by" },
+    { source: "Judicial Officers", target: "Criminal Procedure Code", count: 1, label: "regulated_by" },
     
     // Subordinate Courts relationships
     { source: "Subordinate Courts", target: "High Courts", count: 1, label: "governed_by" },
-    { source: "Subordinate Courts", target: "CPC", count: 1, label: "governed_by" },
-    { source: "Subordinate Courts", target: "CrPC", count: 1, label: "governed_by" },
+    { source: "Subordinate Courts", target: "Civil Procedure Code", count: 1, label: "governed_by" },
+    { source: "Subordinate Courts", target: "Criminal Procedure Code", count: 1, label: "governed_by" },
     
     // President of India relationships
     { source: "President of India", target: "Supreme Court Judges", count: 1, label: "appoints" },
@@ -264,11 +262,11 @@ const judicialEntityMapData = [
     // Additional judicial and procedural relationships
     { source: "Judicial Officers", target: "Subordinate Courts", count: 1, label: "administer" },
     { source: "Judicial Officers", target: "High Courts", count: 1, label: "regulated_by" },
-    { source: "Judicial Officers", target: "CPC", count: 1, label: "regulated_by" },
-    { source: "Judicial Officers", target: "CrPC", count: 1, label: "regulated_by" },
+    { source: "Judicial Officers", target: "Civil Procedure Code", count: 1, label: "regulated_by" },
+    { source: "Judicial Officers", target: "Criminal Procedure Code", count: 1, label: "regulated_by" },
     { source: "Subordinate Courts", target: "High Courts", count: 1, label: "governed_by" },
-    { source: "Subordinate Courts", target: "CPC", count: 1, label: "governed_by" },
-    { source: "Subordinate Courts", target: "CrPC", count: 1, label: "governed_by" },
+    { source: "Subordinate Courts", target: "Civil Procedure Code", count: 1, label: "governed_by" },
+    { source: "Subordinate Courts", target: "Criminal Procedure Code", count: 1, label: "governed_by" },
     { source: "President of India", target: "Council of Ministers", count: 1, label: "acts_on_advice_of" },
     { source: "President of India", target: "PM", count: 1, label: "acts_on_advice_of" },
     { source: "Council of Ministers", target: "President of India", count: 1, label: "advises" },
