@@ -50,7 +50,28 @@ const groupingData = [
     { node: "Legislation (Laws, Rules, Procedures)", label: ":LegalDocument", belongsTo: ":LegalFrameworkGroup" },
     
     // Additional nodes from new relationships
-    { node: "Search-cum-Selection Committee", label: ":AdministrativeBody", belongsTo: ":LegalFrameworkGroup" }
+    { node: "Search-cum-Selection Committee", label: ":AdministrativeBody", belongsTo: ":LegalFrameworkGroup" },
+    
+    // New enforcement and case type entities
+    { node: "Public Prosecutor", label: ":LawEnforcement", belongsTo: ":EnforcementGroup" },
+    { node: "Police Department", label: ":LawEnforcement", belongsTo: ":EnforcementGroup" },
+    { node: "Ministry of Home Affairs", label: ":RegulatoryBody", belongsTo: ":EnforcementGroup" },
+    { node: "District Magistrate", label: ":LawEnforcement", belongsTo: ":EnforcementGroup" },
+    { node: "Corrections Department", label: ":LawEnforcement", belongsTo: ":EnforcementGroup" },
+    { node: "Civil Case", label: ":CaseType", belongsTo: ":CaseTypesGroup" },
+    { node: "Criminal Case", label: ":CaseType", belongsTo: ":CaseTypesGroup" },
+    { node: "Commercial Case", label: ":CaseType", belongsTo: ":CaseTypesGroup" },
+    { node: "District Court", label: ":Judiciary", belongsTo: ":JudiciaryGroup" },
+    { node: "Sessions Court", label: ":Judiciary", belongsTo: ":JudiciaryGroup" },
+    { node: "Commercial Court", label: ":Judiciary", belongsTo: ":JudiciaryGroup" },
+    { node: "Civil Procedure Code", label: ":LegalDocument", belongsTo: ":LegalFrameworkGroup" },
+    { node: "Criminal Procedure Code", label: ":LegalDocument", belongsTo: ":LegalFrameworkGroup" },
+    { node: "Commercial Courts Act", label: ":LegalDocument", belongsTo: ":LegalFrameworkGroup" },
+    { node: "Arbitration Councils", label: ":RegulatoryBody", belongsTo: ":TribunalsAndArbitrationGroup" },
+    { node: "Disputes", label: ":LegalMatter", belongsTo: ":LegalFrameworkGroup" },
+    { node: "Appeals from Tribunals", label: ":LegalMatter", belongsTo: ":LegalFrameworkGroup" },
+    { node: "Prisoners", label: ":People", belongsTo: ":PeopleAndOfficeholdersGroup" },
+    { node: "Jail Administration", label: ":AdministrativeBody", belongsTo: ":LegalFrameworkGroup" }
 ];
 
 const judicialEntityMapData = [
@@ -191,7 +212,67 @@ const judicialEntityMapData = [
     { source: "Search-cum-Selection Committee", target: "Central Govt (Search Committee)", count: 1, label: "appointed_by" },
     { source: "Collegium", target: "Supreme Court", count: 1, label: "members_of" },
     { source: "Council of Ministers", target: "Central Govt (Search Committee)", count: 1, label: "head_of" },
-    { source: "PM", target: "Central Govt (Search Committee)", count: 1, label: "head_of" }
+    { source: "PM", target: "Central Govt (Search Committee)", count: 1, label: "head_of" },
+    
+    // Enforcement and case processing relationships
+    { source: "Public Prosecutor", target: "District Court", count: 1, label: "prosecutes_cases" },
+    { source: "Public Prosecutor", target: "Sessions Court", count: 1, label: "prosecutes_cases" },
+    { source: "Public Prosecutor", target: "High Courts", count: 1, label: "prosecutes_cases" },
+    { source: "Public Prosecutor", target: "Supreme Court", count: 1, label: "prosecutes_cases" },
+    { source: "Police Department", target: "Public Prosecutor", count: 1, label: "investigates_cases" },
+    { source: "Police Department", target: "District Court", count: 1, label: "investigates_cases" },
+    { source: "Police Department", target: "Sessions Court", count: 1, label: "investigates_cases" },
+    { source: "Ministry of Home Affairs", target: "Police Department", count: 1, label: "administers_police" },
+    { source: "Police Department", target: "Ministry of Home Affairs", count: 1, label: "accountable_to" },
+    { source: "District Magistrate", target: "Police Department", count: 1, label: "supervises_police" },
+    { source: "District Magistrate", target: "District Court", count: 1, label: "manages_judicial_enforcement" },
+    { source: "District Magistrate", target: "Police Department", count: 1, label: "manages_judicial_enforcement" },
+    { source: "District Magistrate", target: "Corrections Department", count: 1, label: "manages_judicial_enforcement" },
+    { source: "Corrections Department", target: "Prisoners", count: 1, label: "manages_custody" },
+    { source: "Corrections Department", target: "Jail Administration", count: 1, label: "manages_custody" },
+    
+    // Case type and court relationships
+    { source: "District Court", target: "Civil Case", count: 1, label: "adjudicates" },
+    { source: "Sessions Court", target: "Criminal Case", count: 1, label: "adjudicates" },
+    { source: "Commercial Court", target: "Commercial Case", count: 1, label: "adjudicates" },
+    { source: "Civil Procedure Code", target: "Civil Case", count: 1, label: "governs_case_type" },
+    { source: "Criminal Procedure Code", target: "Criminal Case", count: 1, label: "governs_case_type" },
+    { source: "Commercial Courts Act", target: "Commercial Case", count: 1, label: "governs_case_type" },
+    
+    // Additional tribunal and arbitration relationships
+    { source: "Appellate Tribunals", target: "Appeals from Tribunals", count: 1, label: "adjudicates" },
+    { source: "Appellate Tribunals", target: "Central Govt (Search Committee)", count: 1, label: "appoints_members" },
+    { source: "Appellate Tribunals", target: "Sponsoring Ministry", count: 1, label: "accountable_to" },
+    { source: "Appellate Tribunals", target: "Parliament", count: 1, label: "accountable_to" },
+    { source: "Appellate Tribunals", target: "Sponsoring Ministry", count: 1, label: "reports_to" },
+    { source: "Appellate Tribunals", target: "National Tribunals Commission", count: 1, label: "reports_to" },
+    { source: "Appellate Tribunals", target: "High Courts", count: 1, label: "appellate_to" },
+    { source: "Appellate Tribunals", target: "Supreme Court", count: 1, label: "appellate_to" },
+    { source: "Tribunals", target: "Disputes", count: 1, label: "adjudicates" },
+    { source: "Tribunals", target: "Central Govt (Search Committee)", count: 1, label: "appoints_members" },
+    { source: "Tribunals", target: "Sponsoring Ministry", count: 1, label: "accountable_to" },
+    { source: "Tribunals", target: "Parliament", count: 1, label: "accountable_to" },
+    { source: "Tribunals", target: "Sponsoring Ministry", count: 1, label: "reports_to" },
+    { source: "Tribunals", target: "National Tribunals Commission", count: 1, label: "reports_to" },
+    { source: "Tribunals", target: "Appellate Tribunals", count: 1, label: "appellate_to" },
+    { source: "Arbitration Centres", target: "Arbitration Proceedings", count: 1, label: "administer" },
+    { source: "Arbitration Centres", target: "Ministry of Law & Justice (DoJ)", count: 1, label: "accountable_to" },
+    { source: "Arbitration Centres", target: "Arbitration Council of India", count: 1, label: "accountable_to" },
+    { source: "Arbitration Councils", target: "Arbitration Centres", count: 1, label: "regulate" },
+    { source: "Arbitration Councils", target: "Arbitrators", count: 1, label: "regulate" },
+    
+    // Additional judicial and procedural relationships
+    { source: "Judicial Officers", target: "Subordinate Courts", count: 1, label: "administer" },
+    { source: "Judicial Officers", target: "High Courts", count: 1, label: "regulated_by" },
+    { source: "Judicial Officers", target: "CPC", count: 1, label: "regulated_by" },
+    { source: "Judicial Officers", target: "CrPC", count: 1, label: "regulated_by" },
+    { source: "Subordinate Courts", target: "High Courts", count: 1, label: "governed_by" },
+    { source: "Subordinate Courts", target: "CPC", count: 1, label: "governed_by" },
+    { source: "Subordinate Courts", target: "CrPC", count: 1, label: "governed_by" },
+    { source: "President of India", target: "Council of Ministers", count: 1, label: "acts_on_advice_of" },
+    { source: "President of India", target: "PM", count: 1, label: "acts_on_advice_of" },
+    { source: "Council of Ministers", target: "President of India", count: 1, label: "advises" },
+    { source: "PM", target: "President of India", count: 1, label: "advises" }
 ];
 
 // Configuration

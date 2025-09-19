@@ -28,7 +28,9 @@ class LegalSystemVisualization {
             ":TribunalsAndArbitrationGroup": "#FF6347",  // Tomato
             ":PeopleAndOfficeholdersGroup": "#9370DB",   // Medium Purple
             ":LegalFrameworkGroup": "#20B2AA",           // Light Sea Green
-            ":NonAdministrativeEntitiesGroup": "#DAA520" // Goldenrod
+            ":NonAdministrativeEntitiesGroup": "#DAA520", // Goldenrod
+            ":EnforcementGroup": "#DC143C",              // Crimson
+            ":CaseTypesGroup": "#FF8C00"                 // Dark Orange
         };
         
         // Create mapping from node names to their group colors
@@ -1070,7 +1072,9 @@ class LegalSystemVisualization {
             ":TribunalsAndArbitrationGroup": "Tribunals & Arbitration",
             ":PeopleAndOfficeholdersGroup": "People & Officeholders",
             ":LegalFrameworkGroup": "Legal Framework",
-            ":NonAdministrativeEntitiesGroup": "Non-Administrative"
+            ":NonAdministrativeEntitiesGroup": "Non-Administrative",
+            ":EnforcementGroup": "Enforcement",
+            ":CaseTypesGroup": "Case Types"
         };
         return groupLabels[groupKey] || groupKey.replace(":", "");
     }
