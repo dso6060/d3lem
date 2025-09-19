@@ -219,8 +219,6 @@ class LegalSystemVisualization {
             
             setTimeout(() => {
                 this.optimizeNodeLabelPositions();
-                // Test: Show all labels after simulation stabilizes
-                this.showAllLabelsForTesting();
             }, 50);
             
             setTimeout(() => {
@@ -292,6 +290,11 @@ class LegalSystemVisualization {
         
         this.nodeElements
             .attr("transform", d => `translate(${d.x},${d.y})`);
+        
+        // Update relationship labels if they're visible
+        if (this._labelsVisible) {
+            this.updateRelationshipLabels();
+        }
         
         if (Math.random() < 0.15) {
             setTimeout(() => {
@@ -662,6 +665,9 @@ class LegalSystemVisualization {
 
     // Show relationship labels for a specific node
     showNodeRelationshipLabels(node) {
+        // Enable label visibility
+        this._labelsVisible = true;
+        
         // Remove any existing relationship labels
         this.hideRelationshipLabel();
         
@@ -687,11 +693,20 @@ class LegalSystemVisualization {
     }
 
     hideRelationshipLabel() {
+        // Disable label visibility
+        this._labelsVisible = false;
+        
+        // Remove all relationship labels
         this.svg.selectAll(".relationship-label-group").remove();
     }
 
     // Create simple visible label for testing
     createSimpleLabel(linkData, linkElement, index) {
+        // Only create labels if visibility is enabled
+        if (!this._labelsVisible) {
+            return;
+        }
+        
         console.log(`Creating label for: ${linkData.source.name} -> ${linkData.target.name}: ${linkData.label}`);
         
         // Get midpoint of the link
@@ -706,7 +721,8 @@ class LegalSystemVisualization {
         // Create a simple group
         const group = this.svg.append("g")
             .attr("class", "relationship-label-group")
-            .style("pointer-events", "none");
+            .style("pointer-events", "none")
+            .datum(linkData); // Store link data for updates
         
         // Create background rectangle
         const padding = 8;
@@ -737,16 +753,8 @@ class LegalSystemVisualization {
         console.log(`Label created at position: (${midX}, ${midY})`);
     }
 
-    // Test method to show all labels permanently
-    showAllLabelsForTesting() {
-        console.log("Testing: Showing all relationship labels permanently");
-        this.hideRelationshipLabel();
-        
-        this.linkElements.each((d, i) => {
-            console.log(`Creating test label for link ${i}: ${d.source.name} -> ${d.target.name}: ${d.label}`);
-            this.createSimpleLabel(d, this, i);
-        });
-    }
+    // Label visibility control flag
+    _labelsVisible = false;
 
     // Create tethered label with grouped labelbox
     createTetheredLabel(linkData, linkElement, linkIndex, labelIndex) {
@@ -828,46 +836,46 @@ class LegalSystemVisualization {
     }
 
     updateRelationshipLabels() {
+        // Only update labels if they are visible
+        if (!this._labelsVisible) {
+            return;
+        }
+        
         this.svg.selectAll(".relationship-label-group").each(function() {
             const group = d3.select(this);
-            const data = group.datum();
+            const linkData = group.datum();
             
-            if (!data || !data.linkElement) return;
+            if (!linkData || !linkData.source || !linkData.target) return;
             
-            const path = d3.select(data.linkElement);
-            if (!path.node() || !path.node().getTotalLength) return;
+            // Calculate midpoint of current link positions
+            const sourceX = linkData.source.x;
+            const sourceY = linkData.source.y;
+            const targetX = linkData.target.x;
+            const targetY = linkData.target.y;
             
-            const pathLength = path.node().getTotalLength();
-            const point = path.node().getPointAtLength(pathLength * data.position);
+            const midX = (sourceX + targetX) / 2;
+            const midY = (sourceY + targetY) / 2;
             
             // Update labelbox position
-            const labelbox = group.select(".relationship-labelbox");
-            const label = group.select(".relationship-label-text");
-            const connectionLine = group.select(".label-connection-line");
+            const rect = group.select("rect");
+            const text = group.select("text");
             
-            if (labelbox.node()) {
-                const padding = 6;
-                const textWidth = data.linkData.label.length * 7;
-                const textHeight = 14;
+            if (rect.node()) {
+                const padding = 8;
+                const textWidth = linkData.label.length * 8;
+                const textHeight = 16;
                 
-                labelbox
-                    .attr("x", point.x - (textWidth/2) - padding)
-                    .attr("y", point.y - (textHeight/2) - padding/2);
+                rect
+                    .attr("x", midX - (textWidth/2) - padding)
+                    .attr("y", midY - (textHeight/2) - padding/2);
             }
             
-            if (label.node()) {
-                label
-                    .attr("x", point.x)
-                    .attr("y", point.y);
+            if (text.node()) {
+                text
+                    .attr("x", midX)
+                    .attr("y", midY);
             }
             
-            if (connectionLine.node()) {
-                connectionLine
-                    .attr("x1", point.x)
-                    .attr("y1", point.y)
-                    .attr("x2", point.x)
-                    .attr("y2", point.y);
-            }
         });
     }
 
