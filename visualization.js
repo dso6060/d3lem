@@ -16,6 +16,7 @@ class LegalSystemVisualization {
         this.isAnimating = false;
         this.filteredNodeId = null;
         this.currentView = 'diagram';
+        this._labelsVisible = false; // Initialize label visibility flag
     }
 
     // Initialize the visualization
@@ -81,6 +82,9 @@ class LegalSystemVisualization {
         const companies = window.utils.createUniqueNodes(this.lawsuitData);
         const diagramLinks = window.utils.createDiagramLinks(this.lawsuitData, companies);
         
+        // Store diagramLinks as class property for use in calculateNodeWeights
+        this.diagramLinks = diagramLinks;
+        
         console.log(`Created ${diagramLinks.length} links from ${this.lawsuitData.length} data entries`);
         
         this.simulation.nodes(companies);
@@ -93,6 +97,8 @@ class LegalSystemVisualization {
 
     // Create link elements
     createLinkElements(diagramLinks) {
+        console.log("Creating link elements:", diagramLinks.length, "links");
+        
         this.linkElements = this.svg.append("g")
             .attr("class", "links")
             .selectAll("path")
@@ -101,8 +107,12 @@ class LegalSystemVisualization {
             .append("path")
             .attr("class", d => `link ${d.color}`)
             .attr("marker-end", d => `url(#arrowhead-${d.color})`)
+            .attr("stroke", d => this.colorMap[d.color] || "#999")
+            .attr("fill", "none")
             .style("opacity", 0)
-            .attr("stroke-width", 1.5);
+            .attr("stroke-width", 2);
+        
+        console.log("Link elements created:", this.linkElements.size());
     }
 
     // Create node elements
@@ -124,11 +134,14 @@ class LegalSystemVisualization {
             .style("stroke", "#fff")
             .style("stroke-width", 2);
 
-        // Add text labels to nodes
+        // Add text labels to nodes with intelligent positioning
         this.nodeElements.append("text")
             .attr("class", "node-text")
             .attr("dx", 8)
             .attr("dy", 0)
+            .style("font-size", "11px")
+            .style("font-weight", "400")
+            .style("fill", "#000")
             .text(d => d.name);
     }
 
@@ -185,20 +198,18 @@ class LegalSystemVisualization {
         const connectedNodeIds = d._connectedNodes || new Set([d.id]);
         
         const nodeRadius = this.config.nodeRadius;
-        const textMargin = 100;
-        const centerX = this.config.width / 2;
-        const centerY = this.config.height / 2 - 100;
-        const maxDistance = Math.min(this.config.width, this.config.height) * 0.4;
         
-        let newX = Math.max(nodeRadius + textMargin, Math.min(this.config.width - nodeRadius - textMargin, event.x));
-        let newY = Math.max(nodeRadius + textMargin, Math.min(this.config.height - nodeRadius - textMargin, event.y));
+        // Allow free dragging - only constrain to SVG bounds
+        let newX = event.x;
+        let newY = event.y;
         
-        const distanceFromCenter = Math.sqrt((newX - centerX) ** 2 + (newY - centerY) ** 2);
-        if (distanceFromCenter > maxDistance) {
-            const angle = Math.atan2(newY - centerY, newX - centerX);
-            newX = centerX + Math.cos(angle) * maxDistance;
-            newY = centerY + Math.sin(angle) * maxDistance;
-        }
+        // Ensure nodes stay within SVG bounds (accounting for node labels)
+        // Node labels can extend up to 60px from node center
+        const margin = nodeRadius + 60;
+        if (newX < margin) newX = margin;
+        if (newX > this.config.width - margin) newX = this.config.width - margin;
+        if (newY < margin) newY = margin;
+        if (newY > this.config.height - margin) newY = this.config.height - margin;
         
         d.fx = newX;
         d.fy = newY;
@@ -232,8 +243,9 @@ class LegalSystemVisualization {
         this.simulation.force("link").strength(1);
         
         if (!event.active) this.simulation.alphaTarget(0);
-        d.fx = null;
-        d.fy = null;
+        
+        // Keep the node at its dragged position (don't release it back to elliptical constraints)
+        // d.fx and d.fy remain set to keep the node fixed at its dragged position
         
         const connectedNodeIds = d._connectedNodes || new Set([d.id]);
         this.simulation.nodes().forEach(node => {
@@ -247,29 +259,101 @@ class LegalSystemVisualization {
         
         this.removeHighlighting();
         
-        setTimeout(() => {
-            this.hideRelationshipLabel();
-        }, 100);
+        // Keep labels visible after drag ends - they'll be hidden when mouse leaves
+        // setTimeout(() => {
+        //     this.hideRelationshipLabel();
+        // }, 100);
+    }
+
+    // Calculate node weights based on number of connections
+    calculateNodeWeights(nodes) {
+        const weights = {};
+        
+        // Safety check - return empty weights if diagramLinks not available yet
+        if (!this.diagramLinks || !Array.isArray(this.diagramLinks)) {
+            console.warn("diagramLinks not available yet, returning empty weights");
+            return weights;
+        }
+        
+        // Count connections for each node
+        this.diagramLinks.forEach(link => {
+            const sourceId = link.source.id || link.source;
+            const targetId = link.target.id || link.target;
+            
+            weights[sourceId] = (weights[sourceId] || 0) + 1;
+            weights[targetId] = (weights[targetId] || 0) + 1;
+        });
+        
+        // Normalize weights to 0-1 range
+        const maxConnections = Math.max(...Object.values(weights));
+        const minConnections = Math.min(...Object.values(weights));
+        const weightRange = maxConnections - minConnections;
+        
+        Object.keys(weights).forEach(nodeId => {
+            if (weightRange > 0) {
+                weights[nodeId] = (weights[nodeId] - minConnections) / weightRange;
+            } else {
+                weights[nodeId] = 0.5; // All nodes have same weight
+            }
+        });
+        
+        return weights;
     }
 
     // Update positions during simulation
     ticked() {
         const nodeRadius = this.config.nodeRadius;
-        const textMargin = 100;
         const centerX = this.config.width / 2;
-        const centerY = this.config.height / 2 - 100;
-        const maxDistance = Math.min(this.config.width, this.config.height) * 0.4;
+        const centerY = this.config.height / 2;
         
-        this.simulation.nodes().forEach(d => {
-            d.x = Math.max(nodeRadius + textMargin, Math.min(this.config.width - nodeRadius - textMargin, d.x));
-            d.y = Math.max(nodeRadius + textMargin, Math.min(this.config.height - nodeRadius - textMargin, d.y));
-            
-            const distanceFromCenter = Math.sqrt((d.x - centerX) ** 2 + (d.y - centerY) ** 2);
-            if (distanceFromCenter > maxDistance) {
-                const angle = Math.atan2(d.y - centerY, d.x - centerX);
-                d.x = centerX + Math.cos(angle) * maxDistance;
-                d.y = centerY + Math.sin(angle) * maxDistance;
+        // Define elliptical boundaries (horizontal major axis, vertical minor axis)
+        const innerSemiMajor = this.config.width * 0.15;   // 15% of width for inner ellipse (closer to center)
+        const innerSemiMinor = this.config.height * 0.08;  // 8% of height for inner ellipse
+        const outerSemiMajor = this.config.width * 0.45;   // 45% of width for outer ellipse
+        const outerSemiMinor = this.config.height * 0.28;  // 28% of height for outer ellipse
+        
+        // Calculate node weights based on connections
+        const nodes = this.simulation.nodes();
+        const nodeWeights = this.calculateNodeWeights(nodes);
+        
+        nodes.forEach((d, i) => {
+            // Only apply elliptical constraints to nodes that are NOT being dragged
+            if (d.fx === undefined && d.fy === undefined) {
+                // Get node weight (0 = least connected, 1 = most connected)
+                const weight = nodeWeights[d.id] || 0;
+                
+                // Calculate elliptical distance from center
+                const dx = d.x - centerX;
+                const dy = d.y - centerY;
+                
+                // Calculate target ellipse based on weight
+                // Higher weight = closer to center (smaller ellipse)
+                const targetSemiMajor = innerSemiMajor + (outerSemiMajor - innerSemiMajor) * (1 - weight);
+                const targetSemiMinor = innerSemiMinor + (outerSemiMinor - innerSemiMinor) * (1 - weight);
+                
+                const targetEllipseDist = (dx * dx) / (targetSemiMajor * targetSemiMajor) + (dy * dy) / (targetSemiMinor * targetSemiMinor);
+                
+                // If node is outside its target ellipse, project it back
+                if (targetEllipseDist > 1) {
+                    // Calculate parametric angle for even distribution around target ellipse
+                    // Use node index to ensure consistent positioning
+                    const baseAngle = (2 * Math.PI * i) / nodes.length;
+                    // Add slight randomization based on weight to avoid perfect alignment
+                    const angleVariation = (weight - 0.5) * 0.3; // ±0.15 radians variation
+                    const parametricAngle = baseAngle + angleVariation;
+                    
+                    d.x = centerX + targetSemiMajor * Math.cos(parametricAngle);
+                    d.y = centerY + targetSemiMinor * Math.sin(parametricAngle);
+                }
             }
+            
+            // Ensure all nodes stay within SVG bounds (both dragged and non-dragged)
+            // Account for node labels which can extend up to 60px from node center
+            const margin = nodeRadius + 60;
+            if (d.x < margin) d.x = margin;
+            if (d.x > this.config.width - margin) d.x = this.config.width - margin;
+            if (d.y < margin) d.y = margin;
+            if (d.y > this.config.height - margin) d.y = this.config.height - margin;
         });
         
         this.linkElements
@@ -296,7 +380,8 @@ class LegalSystemVisualization {
             this.updateRelationshipLabels();
         }
         
-        if (Math.random() < 0.15) {
+        // Optimize label positions more frequently to prevent overlaps
+        if (Math.random() < 0.3) {
             setTimeout(() => {
                 this.optimizeNodeLabelPositions();
             }, 0);
@@ -310,16 +395,18 @@ class LegalSystemVisualization {
                 const selectedNode = this.svg.attr("data-selected-node");
                 if (!selectedNode) {
                     this.showRelatedNodesOnHover(d);
-                    // Show tethered labels for this node's relationships
-                    this.showNodeRelationshipLabels(d);
                 }
+                // Always show tethered labels for this node's relationships on hover
+                this.showNodeRelationshipLabels(d);
             })
             .on("mouseout", (event, d) => {
                 const selectedNode = this.svg.attr("data-selected-node");
                 if (!selectedNode) {
                     this.restoreNormalView();
-                    // Hide relationship labels when mouse leaves node
-                    this.hideRelationshipLabel();
+                    // Hide relationship labels when mouse leaves node with a small delay
+                    setTimeout(() => {
+                        this.hideRelationshipLabel();
+                    }, 100);
                 }
             })
             .on("click", (event, d) => {
@@ -338,6 +425,11 @@ class LegalSystemVisualization {
                     .transition()
                     .duration(200)
                     .attr("stroke-width", 2.5);
+                
+                // Show the simple relationship label for this specific arrow
+                this.showArrowRelationshipLabel(d, event.currentTarget);
+                
+                // Also show the complex label in the corner
                 this.showTooltip(event, `${d.source.name} → ${d.target.name}: ${d.label}`);
             })
             .on("mouseout", (event, d) => {
@@ -350,6 +442,9 @@ class LegalSystemVisualization {
                     .duration(200)
                     .attr("stroke-width", 1.5);
                 this.hideTooltip();
+                
+                // Hide the arrow relationship label
+                this.svg.selectAll(".arrow-relationship-label").remove();
             });
     }
 
@@ -397,6 +492,8 @@ class LegalSystemVisualization {
                 .delay(400)
                 .style("opacity", 1);
             
+            console.log("Making links visible, opacity set to 1");
+            
             this.simulation.on("tick", () => this.ticked());
             this.simulation.alpha(1).restart();
             
@@ -406,6 +503,11 @@ class LegalSystemVisualization {
                 toggleBtn.disabled = false;
                 this.isAnimating = false;
                 this.currentView = 'diagram';
+                
+                // Optimize label positions after simulation stabilizes
+                setTimeout(() => {
+                    this.optimizeNodeLabelPositions();
+                }, 500);
                 
                 if (this.filteredNodeId) {
                     setTimeout(() => {
@@ -546,22 +648,12 @@ class LegalSystemVisualization {
     applyNodeFilter(nodeId) {
         this.filteredNodeId = nodeId;
         
-        // Filter nodes
-        this.nodeElements
-            ?.style("opacity", d => {
-                const isConnected = this.lawsuitData.some(link => 
-                    (link.source === nodeId && link.target === d.id) ||
-                    (link.target === nodeId && link.source === d.id)
-                );
-                return isConnected ? 1 : 0.2;
-            });
+        // Find the selected node data
+        const selectedNode = this.nodeElements.data().find(d => d.id === nodeId);
+        if (!selectedNode) return;
         
-        // Filter links
-        this.linkElements
-            ?.style("opacity", d => {
-                const isConnected = (d.source.id === nodeId || d.target.id === nodeId);
-                return isConnected ? 1 : 0.2;
-            });
+        // Apply enhanced highlighting using the same system as mouse hover
+        this.highlightSelectedNode(selectedNode);
         
         // Show relationship labels for filtered node
         if (this.currentView === 'diagram') {
@@ -614,7 +706,7 @@ class LegalSystemVisualization {
             return false;
         });
         
-        // Highlight connected nodes with bold styling
+        // Highlight connected nodes with bold styling and enhanced labels
         this.nodeElements.filter(d => connectedNodeIds.has(d.id))
             .style("opacity", 1)
             .style("z-index", 10)
@@ -623,7 +715,18 @@ class LegalSystemVisualization {
             .style("stroke", "#ff6b35")
             .style("filter", "drop-shadow(0 0 6px rgba(255, 107, 53, 0.6))");
         
-        // Bold the selected node even more
+        // Enhance connected node labels with larger font and background
+        this.nodeElements.filter(d => connectedNodeIds.has(d.id))
+            .select(".node-text")
+            .style("font-size", "14px")
+            .style("font-weight", "700")
+            .style("fill", "#1f4e79")  // Darker blue instead of orange
+            .style("stroke", "#fff")
+            .style("stroke-width", "2px")
+            .style("paint-order", "stroke fill")
+            .style("filter", "drop-shadow(0 1px 2px rgba(0,0,0,0.3))");
+        
+        // Bold the selected node even more with enhanced label
         this.nodeElements.filter(d => d.id === selectedNode.id)
             .style("opacity", 1)
             .style("z-index", 20)
@@ -631,6 +734,17 @@ class LegalSystemVisualization {
             .style("stroke-width", 5)
             .style("stroke", "#ff0000")
             .style("filter", "drop-shadow(0 0 10px rgba(255, 0, 0, 0.8))");
+        
+        // Enhance selected node label with largest font and strong background
+        this.nodeElements.filter(d => d.id === selectedNode.id)
+            .select(".node-text")
+            .style("font-size", "16px")
+            .style("font-weight", "900")
+            .style("fill", "#0d3a5f")  // Even darker blue instead of red
+            .style("stroke", "#fff")
+            .style("stroke-width", "3px")
+            .style("paint-order", "stroke fill")
+            .style("filter", "drop-shadow(0 2px 4px rgba(0,0,0,0.5))");
         
         // Highlight connected links
         connectedLinks
@@ -653,6 +767,17 @@ class LegalSystemVisualization {
             .style("stroke", "#fff")
             .style("filter", "none");
         
+        // Reset all node text labels to normal styling
+        this.nodeElements.select(".node-text")
+            .transition()
+            .duration(200)
+            .style("font-size", "11px")
+            .style("font-weight", "400")
+            .style("fill", "#000")
+            .style("stroke", "none")
+            .style("stroke-width", "0px")
+            .style("filter", "none");
+        
         this.linkElements
             .style("opacity", 1)
             .style("z-index", 1)
@@ -665,16 +790,20 @@ class LegalSystemVisualization {
 
     // Show relationship labels for a specific node
     showNodeRelationshipLabels(node) {
-        // Enable label visibility
-        this._labelsVisible = true;
+        console.log("showNodeRelationshipLabels called for node:", node.id);
         
-        // Remove any existing relationship labels
+        // Remove any existing relationship labels first
         this.hideRelationshipLabel();
+        
+        // Enable label visibility AFTER removing existing labels
+        this._labelsVisible = true;
+        console.log("_labelsVisible set to:", this._labelsVisible);
         
         // Find all links connected to this node
         const connectedLinks = [];
         this.linkElements.each(function(d, i) {
             if (d.source.id === node.id || d.target.id === node.id) {
+                console.log("Found connected link:", d.source.id, "->", d.target.id, "label:", d.label);
                 connectedLinks.push({ 
                     link: d, 
                     element: this, 
@@ -684,10 +813,12 @@ class LegalSystemVisualization {
             }
         });
         
-        console.log(`Showing labels for node: ${node.id}, connected links: ${connectedLinks.length}`);
+        console.log("Total connected links found:", connectedLinks.length);
+        console.log("About to create labels, _labelsVisible is:", this._labelsVisible);
         
         // Create simple visible labels for testing
         connectedLinks.forEach((linkData, i) => {
+            console.log("Creating label", i, "_labelsVisible is:", this._labelsVisible);
             this.createSimpleLabel(linkData.link, linkData.element, i);
         });
     }
@@ -700,14 +831,10 @@ class LegalSystemVisualization {
         this.svg.selectAll(".relationship-label-group").remove();
     }
 
-    // Create simple visible label for testing
-    createSimpleLabel(linkData, linkElement, index) {
-        // Only create labels if visibility is enabled
-        if (!this._labelsVisible) {
-            return;
-        }
-        
-        console.log(`Creating label for: ${linkData.source.name} -> ${linkData.target.name}: ${linkData.label}`);
+    // Show relationship label for a specific arrow on hover
+    showArrowRelationshipLabel(linkData, linkElement) {
+        // Remove any existing arrow relationship labels
+        this.svg.selectAll(".arrow-relationship-label").remove();
         
         // Get midpoint of the link
         const sourceX = linkData.source.x;
@@ -718,11 +845,12 @@ class LegalSystemVisualization {
         const midX = (sourceX + targetX) / 2;
         const midY = (sourceY + targetY) / 2;
         
-        // Create a simple group
+        // Create a simple group for the arrow label
         const group = this.svg.append("g")
-            .attr("class", "relationship-label-group")
+            .attr("class", "arrow-relationship-label")
             .style("pointer-events", "none")
-            .datum(linkData); // Store link data for updates
+            .style("opacity", 1)
+            .style("z-index", 100);
         
         // Create background rectangle
         const padding = 8;
@@ -734,10 +862,72 @@ class LegalSystemVisualization {
             .attr("y", midY - (textHeight/2) - padding/2)
             .attr("width", textWidth + (padding * 2))
             .attr("height", textHeight + padding)
-            .style("fill", "rgba(255, 255, 255, 0.95)")
-            .style("stroke", "#333")
+            .style("fill", "rgba(255, 255, 255, 1.0)")
+            .style("stroke", "#000")
             .style("stroke-width", 2)
-            .style("rx", 4);
+            .style("rx", 4)
+            .style("filter", "drop-shadow(0 2px 4px rgba(0,0,0,0.3))");
+        
+        // Create text label
+        const text = group.append("text")
+            .attr("x", midX)
+            .attr("y", midY)
+            .attr("text-anchor", "middle")
+            .attr("dominant-baseline", "central")
+            .style("font-size", "12px")
+            .style("font-weight", "bold")
+            .style("fill", "#000")
+            .text(linkData.label);
+    }
+
+    // Create simple visible label for testing
+    createSimpleLabel(linkData, linkElement, index) {
+        console.log("createSimpleLabel called with:", linkData.label, "_labelsVisible:", this._labelsVisible);
+        
+        // Only create labels if visibility is enabled
+        if (!this._labelsVisible) {
+            console.log("Labels not visible, returning");
+            return;
+        }
+        
+        // Get midpoint of the link
+        const sourceX = linkData.source.x;
+        const sourceY = linkData.source.y;
+        const targetX = linkData.target.x;
+        const targetY = linkData.target.y;
+        
+        const midX = (sourceX + targetX) / 2;
+        const midY = (sourceY + targetY) / 2;
+        
+        console.log("Creating label at position:", midX, midY, "for label:", linkData.label);
+        
+        // Create a simple group
+        const group = this.svg.append("g")
+            .attr("class", "relationship-label-group")
+            .style("pointer-events", "none")
+            .style("opacity", 1)
+            .style("z-index", 100)
+            .datum(linkData); // Store link data for updates
+        
+        console.log("Label group created, adding rectangle and text");
+        
+        // Create background rectangle
+        const padding = 8;
+        const textWidth = linkData.label.length * 8;
+        const textHeight = 16;
+        
+        const rect = group.append("rect")
+            .attr("x", midX - (textWidth/2) - padding)
+            .attr("y", midY - (textHeight/2) - padding/2)
+            .attr("width", textWidth + (padding * 2))
+            .attr("height", textHeight + padding)
+            .style("fill", "rgba(255, 255, 255, 1.0)")
+            .style("stroke", "#000")
+            .style("stroke-width", 2)
+            .style("rx", 4)
+            .style("filter", "drop-shadow(0 2px 4px rgba(0,0,0,0.3))");
+        
+        console.log("Rectangle created at:", midX - (textWidth/2) - padding, midY - (textHeight/2) - padding/2);
         
         // Create text label
         const text = group.append("text")
@@ -750,11 +940,10 @@ class LegalSystemVisualization {
             .style("fill", "#000")
             .text(linkData.label);
         
-        console.log(`Label created at position: (${midX}, ${midY})`);
+        console.log("Text label created with text:", linkData.label);
     }
 
-    // Label visibility control flag
-    _labelsVisible = false;
+    // Label visibility control flag - initialized in constructor
 
     // Create tethered label with grouped labelbox
     createTetheredLabel(linkData, linkElement, linkIndex, labelIndex) {
@@ -880,12 +1069,84 @@ class LegalSystemVisualization {
     }
 
     optimizeNodeLabelPositions() {
-        // Simplified implementation - just return to default positions
-        this.nodeElements?.selectAll(".node-text")
-            .transition()
-            .duration(200)
-            .attr("dx", 8)
-            .attr("dy", 0);
+        // Intelligent label positioning to avoid overlaps
+        const nodes = this.nodeElements.nodes();
+        const nodeData = nodes.map(node => ({
+            element: node,
+            data: d3.select(node).datum(),
+            text: d3.select(node).select('.node-text')
+        }));
+
+        // Calculate optimal positions for each label
+        nodeData.forEach((node, i) => {
+            // Calculate radial position for better elliptical distribution
+            const centerX = this.config.width / 2;
+            const centerY = this.config.height / 2;
+            const angle = Math.atan2(node.data.y - centerY, node.data.x - centerX);
+            
+            // Calculate elliptical scaling factors
+            const ellipseScaleX = 1.0; // Horizontal scaling (major axis)
+            const ellipseScaleY = 0.6; // Vertical scaling (minor axis)
+            
+            const positions = [
+                { dx: 18, dy: 0 },   // Right (horizontal - more space)
+                { dx: -18, dy: 0 },  // Left (horizontal - more space)
+                { dx: 0, dy: -15 },  // Above (vertical - less space)
+                { dx: 0, dy: 15 },   // Below (vertical - less space)
+                { dx: 15, dy: -10 }, // Top-right
+                { dx: -15, dy: -10 }, // Top-left
+                { dx: 15, dy: 10 },  // Bottom-right
+                { dx: -15, dy: 10 }, // Bottom-left
+                // Elliptical-aware positions
+                { dx: Math.cos(angle) * 18 * ellipseScaleX, dy: Math.sin(angle) * 15 * ellipseScaleY },     // Radial outward (elliptical)
+                { dx: Math.cos(angle) * -18 * ellipseScaleX, dy: Math.sin(angle) * -15 * ellipseScaleY },   // Radial inward (elliptical)
+                { dx: Math.cos(angle + Math.PI/2) * 15 * ellipseScaleX, dy: Math.sin(angle + Math.PI/2) * 15 * ellipseScaleY }, // Perpendicular
+                { dx: Math.cos(angle - Math.PI/2) * 15 * ellipseScaleX, dy: Math.sin(angle - Math.PI/2) * 15 * ellipseScaleY }  // Perpendicular opposite
+            ];
+
+            let bestPosition = positions[0];
+            let minOverlap = Infinity;
+
+            // Test each position and find the one with least overlap
+            positions.forEach(pos => {
+                const testX = node.data.x + pos.dx;
+                const testY = node.data.y + pos.dy;
+                
+                // Check if label position would be within SVG bounds
+                const labelMargin = 20; // Margin from edges
+                if (testX < labelMargin || testX > this.config.width - labelMargin ||
+                    testY < labelMargin || testY > this.config.height - labelMargin) {
+                    return; // Skip this position if it would go outside bounds
+                }
+                
+                let overlap = 0;
+                nodeData.forEach((otherNode, j) => {
+                    if (i === j) return;
+                    
+                    const otherX = otherNode.data.x + (otherNode.text.attr('dx') || 8);
+                    const otherY = otherNode.data.y + (otherNode.text.attr('dy') || 0);
+                    
+                    const distance = Math.sqrt((testX - otherX) ** 2 + (testY - otherY) ** 2);
+                    const textWidth = Math.max(node.data.name.length * 6, 40); // Approximate text width
+                    
+                    if (distance < textWidth) {
+                        overlap += (textWidth - distance);
+                    }
+                });
+                
+                if (overlap < minOverlap) {
+                    minOverlap = overlap;
+                    bestPosition = pos;
+                }
+            });
+
+            // Apply the best position
+            node.text
+                .transition()
+                .duration(200)
+                .attr("dx", bestPosition.dx)
+                .attr("dy", bestPosition.dy);
+        });
     }
 
     showRelatedNodesOnHover(hoveredNode) {
@@ -912,6 +1173,19 @@ class LegalSystemVisualization {
             .duration(200)
             .style("opacity", d => connectedNodeIds.has(d.id) ? 1 : 0.2);
         
+        // Highlight connected node labels with enhanced styling
+        this.nodeElements.filter(d => connectedNodeIds.has(d.id))
+            .select(".node-text")
+            .transition()
+            .duration(200)
+            .style("font-size", d => d.id === hoveredNode.id ? "16px" : "14px")
+            .style("font-weight", d => d.id === hoveredNode.id ? "900" : "700")
+            .style("fill", d => d.id === hoveredNode.id ? "#0d3a5f" : "#1f4e79")
+            .style("stroke", "#fff")
+            .style("stroke-width", "2px")
+            .style("paint-order", "stroke fill")
+            .style("filter", "drop-shadow(0 1px 2px rgba(0,0,0,0.3))");
+        
         // Fade all links except connected ones
         this.linkElements
             .transition()
@@ -925,39 +1199,71 @@ class LegalSystemVisualization {
             return;
         }
         
-        // Restore all nodes opacity
+        // Restore all nodes opacity and styling
         this.nodeElements
             .transition()
             .duration(200)
-            .style("opacity", 1);
+            .style("opacity", 1)
+            .style("z-index", 1);
         
-        // Restore all links opacity
+        // Restore node circles to normal styling
+        this.nodeElements.select("circle")
+            .transition()
+            .duration(200)
+            .style("stroke-width", 2)
+            .style("stroke", "#fff")
+            .style("filter", "none");
+        
+        // Restore all node text labels to normal styling
+        this.nodeElements.select(".node-text")
+            .transition()
+            .duration(200)
+            .style("font-size", "11px")
+            .style("font-weight", "400")
+            .style("fill", "#000")
+            .style("stroke", "none")
+            .style("stroke-width", "0px")
+            .style("filter", "none");
+        
+        // Restore all links opacity and styling
         this.linkElements
             .transition()
             .duration(200)
-            .style("opacity", 1);
+            .style("opacity", 1)
+            .style("z-index", 1)
+            .style("stroke-width", 1.5)
+            .style("filter", "none");
+        
+        // Clear selection state
+        this.svg.attr("data-selected-node", null);
     }
 
     showTooltip(event, text) {
-        const tooltip = d3.select("body").append("div")
-            .attr("class", "tooltip")
+        // Remove any existing relationship info
+        this.hideTooltip();
+        
+        // Create relationship info in top-right corner
+        const relationshipInfo = d3.select("#diagram-view").append("div")
+            .attr("class", "relationship-info")
             .style("position", "absolute")
-            .style("background", "rgba(0, 0, 0, 0.8)")
+            .style("top", "20px")
+            .style("right", "20px")
+            .style("background", "rgba(0, 0, 0, 0.9)")
             .style("color", "white")
-            .style("padding", "8px 12px")
-            .style("border-radius", "4px")
-            .style("font-size", "12px")
+            .style("padding", "12px 16px")
+            .style("border-radius", "6px")
+            .style("font-size", "14px")
+            .style("font-weight", "bold")
             .style("pointer-events", "none")
             .style("z-index", "1000")
+            .style("max-width", "300px")
+            .style("box-shadow", "0 4px 12px rgba(0,0,0,0.3)")
             .text(text);
-        
-        tooltip
-            .style("left", (event.pageX + 10) + "px")
-            .style("top", (event.pageY - 10) + "px");
     }
 
     hideTooltip() {
         d3.selectAll(".tooltip").remove();
+        d3.selectAll(".relationship-info").remove();
     }
 
     showFilteredNodeLabels(nodeId) {
@@ -967,31 +1273,12 @@ class LegalSystemVisualization {
             return;
         }
         
-        // Remove any existing relationship labels
-        this.hideRelationshipLabel();
+        // Find the selected node data
+        const selectedNode = this.nodeElements.data().find(d => d.id === nodeId);
+        if (!selectedNode) return;
         
-        // Find all links connected to this node from the original data
-        const connectedLinks = this.lawsuitData.filter(link => 
-            link.source === nodeId || link.target === nodeId
-        );
-        
-        // Show labels for each connected link
-        connectedLinks.forEach((linkData, i) => {
-            // Find the corresponding link element in the visualization
-            const linkElement = this.linkElements.filter(d => 
-                d.source.id === linkData.source && d.target.id === linkData.target
-            ).node();
-            
-            if (linkElement) {
-                // Create a proper data object with the correct structure for the label function
-                const labelData = {
-                    source: { id: linkData.source, x: linkElement.__data__.source.x, y: linkElement.__data__.source.y },
-                    target: { id: linkData.target, x: linkElement.__data__.target.x, y: linkElement.__data__.target.y },
-                    label: linkData.label
-                };
-                this.showRelationshipLabelOnArrow(linkElement, labelData, i);
-            }
-        });
+        // Use the same method as drag/hover for consistency
+        this.showNodeRelationshipLabels(selectedNode);
     }
 
     showRelationshipLabelOnArrow(linkElement, d, index) {

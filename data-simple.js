@@ -139,11 +139,11 @@ const config = {
     width: 1400,
     height: 900,
     nodeRadius: 4,
-    linkDistance: 180,
-    chargeStrength: -500,
-    centerStrength: 0.3,
-    xStrength: 0.2,
-    yStrength: 0.2
+    linkDistance: 200,  // Balanced distance for circular layout
+    chargeStrength: -600,  // Moderate repulsion for better circular distribution
+    centerStrength: 0.1,  // Reduced center pull to allow more circular spread
+    xStrength: 0.05,     // Reduced directional forces
+    yStrength: 0.05
 };
 
 // Color mapping for arrow markers
