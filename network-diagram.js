@@ -3,6 +3,7 @@
 class LegalSystemVisualization {
     constructor(data, config, colorMap) {
         this.judicialEntityMapData = data.judicialEntityMapData;
+        this.groupingData = data.groupingData;
         this.config = data.config;
         this.colorMap = data.colorMap;
         
@@ -17,6 +18,76 @@ class LegalSystemVisualization {
         this.filteredNodeId = null;
         this.currentView = 'diagram';
         this._labelsVisible = false; // Initialize label visibility flag
+        this.isGrouped = false; // Track if nodes are currently grouped
+        this.groupElements = null; // Store group circle elements
+        
+        // Create color scheme for different groups
+        this.groupColors = {
+            ":LegislativeAndRegulatory": "#2E8B57",      // Sea Green
+            ":JudiciaryGroup": "#4169E1",                // Royal Blue
+            ":TribunalsAndArbitrationGroup": "#FF6347",  // Tomato
+            ":PeopleAndOfficeholdersGroup": "#9370DB",   // Medium Purple
+            ":LegalFrameworkGroup": "#20B2AA",           // Light Sea Green
+            ":NonAdministrativeEntitiesGroup": "#DAA520" // Goldenrod
+        };
+        
+        // Create mapping from node names to their group colors
+        this.nodeGroupMap = this.createNodeGroupMap();
+    }
+
+    // Create mapping from node names to their group colors
+    createNodeGroupMap() {
+        const nodeGroupMap = {};
+        this.groupingData.forEach(item => {
+            nodeGroupMap[item.node] = {
+                group: item.belongsTo,
+                color: this.groupColors[item.belongsTo] || "#999999",
+                label: item.label
+            };
+        });
+        return nodeGroupMap;
+    }
+
+    // Get node color based on its group
+    getNodeColor(nodeName) {
+        const nodeInfo = this.nodeGroupMap[nodeName];
+        const color = nodeInfo ? nodeInfo.color : "#999999"; // Default gray for unknown nodes
+        return color;
+    }
+
+    // Get node group information
+    getNodeGroup(nodeName) {
+        const nodeInfo = this.nodeGroupMap[nodeName];
+        return nodeInfo ? nodeInfo.group : "Unknown";
+    }
+
+    // Clear all highlights and labels
+    clearAllHighlightsAndLabels() {
+        // Clear any active filters
+        this.filteredNodeId = null;
+        
+        // Reset dropdown
+        const nodeFilter = document.getElementById("nodeFilter");
+        if (nodeFilter) {
+            nodeFilter.value = "";
+        }
+        
+        // Hide all relationship labels
+        this.hideRelationshipLabel();
+        
+        // Remove any arrow relationship labels
+        this.svg.selectAll(".arrow-relationship-label").remove();
+        
+        // Hide tooltips
+        this.hideTooltip();
+        
+        // Restore normal view (clears all highlighting)
+        this.restoreNormalView();
+        
+        // Clear selection state
+        this.svg.attr("data-selected-node", null);
+        
+        console.log("Cleared all highlights and labels");
     }
 
     // Initialize the visualization
@@ -37,20 +108,30 @@ class LegalSystemVisualization {
             .attr("width", this.config.width)
             .attr("height", this.config.height);
         
+        // Add background click event to clear highlights and labels
+        this.svg.on("click", (event) => {
+            // Only clear if clicking on the background (not on nodes or links)
+            if (event.target === this.svg.node()) {
+                this.clearAllHighlightsAndLabels();
+            }
+        });
+        
         this.createArrowMarkers();
         this.createForceSimulation();
         this.prepareDiagramData();
     }
 
-    // Create arrow markers for the two colors
+    // Create arrow markers for group colors
     createArrowMarkers() {
         let defs = this.svg.select("defs");
         if (defs.empty()) {
             defs = this.svg.append("defs");
             
-            Object.entries(this.colorMap).forEach(([colorName, colorValue]) => {
+            // Create markers for each group color
+            Object.entries(this.groupColors).forEach(([groupName, colorValue]) => {
+                const markerId = `arrowhead-${colorValue.replace('#', '')}`;
                 defs.append("marker")
-                    .attr("id", `arrowhead-${colorName}`)
+                    .attr("id", markerId)
                     .attr("viewBox", "0 -5 10 10")
                     .attr("refX", 9)
                     .attr("refY", 0)
@@ -62,6 +143,7 @@ class LegalSystemVisualization {
                     .attr("d", "M 0,-5 L 10 ,0 L 0,5")
                     .attr("fill", colorValue);
             });
+            
         }
     }
 
@@ -74,12 +156,192 @@ class LegalSystemVisualization {
             .force("collision", d3.forceCollide().radius(this.config.nodeRadius + 10))
             .force("x", d3.forceX(this.config.width / 2).strength(this.config.xStrength * 0.3))
             .force("y", d3.forceY(this.config.height / 2 - 100).strength(this.config.yStrength * 0.3))
-            .force("radial", d3.forceRadial(350, this.config.width / 2, this.config.height / 2 - 100).strength(0.05));
+            .force("radial", d3.forceRadial(350, this.config.width / 2, this.config.height / 2 - 100).strength(0.05))
+            .force("arrowRepulsion", this.createArrowRepulsionForce());
+    }
+
+    // Create custom force for arrow repulsion when labels are too close
+    createArrowRepulsionForce() {
+        const force = (alpha) => {
+            if (!this._labelsVisible) return;
+            
+            // Get all visible labels
+            const labels = this.svg.selectAll(".relationship-label-group").nodes();
+            const labelData = labels.map(label => {
+                const rect = d3.select(label).select("rect");
+                const bbox = rect.node().getBBox();
+                return {
+                    x: bbox.x + bbox.width / 2,
+                    y: bbox.y + bbox.height / 2,
+                    width: bbox.width,
+                    height: bbox.height,
+                    element: label
+                };
+            });
+
+            // Check for collisions and apply repulsion
+            for (let i = 0; i < labelData.length; i++) {
+                for (let j = i + 1; j < labelData.length; j++) {
+                    const label1 = labelData[i];
+                    const label2 = labelData[j];
+                    
+                    // Calculate distance between label centers
+                    const dx = label1.x - label2.x;
+                    const dy = label1.y - label2.y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    
+                    // Minimum distance to avoid collision (label width + padding)
+                    const minDistance = Math.max(label1.width, label2.width) + 20;
+                    
+                    if (distance < minDistance && distance > 0) {
+                        // Calculate repulsion force
+                        const force = (minDistance - distance) / minDistance;
+                        const angle = Math.atan2(dy, dx);
+                        
+                        // Apply repulsion to the nodes connected by these labels
+                        this.applyLabelRepulsion(label1, label2, force, angle, alpha);
+                    }
+                }
+            }
+        };
+        
+        force.initialize = () => {}; // No initialization needed
+        return force;
+    }
+
+    // Apply repulsion force to nodes when their labels collide
+    applyLabelRepulsion(label1, label2, force, angle, alpha) {
+        // Find the links associated with these labels
+        const link1 = this.findLinkForLabel(label1.element);
+        const link2 = this.findLinkForLabel(label2.element);
+        
+        if (!link1 || !link2) return;
+        
+        // Apply repulsion to the source nodes of the links
+        const repulsionStrength = force * alpha * 0.1;
+        
+        // Repel source nodes away from each other
+        if (link1.source && link2.source) {
+            const dx = Math.cos(angle) * repulsionStrength;
+            const dy = Math.sin(angle) * repulsionStrength;
+            
+            link1.source.vx = (link1.source.vx || 0) + dx;
+            link1.source.vy = (link1.source.vy || 0) + dy;
+            link2.source.vx = (link2.source.vx || 0) - dx;
+            link2.source.vy = (link2.source.vy || 0) - dy;
+        }
+    }
+
+    // Find the link data associated with a label element
+    findLinkForLabel(labelElement) {
+        const linkData = d3.select(labelElement).datum();
+        if (linkData && linkData.source && linkData.target) {
+            return linkData;
+        }
+        return null;
+    }
+
+    // Avoid label collisions by adjusting positions
+    avoidLabelCollisions() {
+        if (!this._labelsVisible) return;
+        
+        const labels = this.svg.selectAll(".relationship-label-group").nodes();
+        const labelData = labels.map(label => {
+            const rect = d3.select(label).select("rect");
+            const bbox = rect.node().getBBox();
+            return {
+                x: bbox.x + bbox.width / 2,
+                y: bbox.y + bbox.height / 2,
+                width: bbox.width,
+                height: bbox.height,
+                element: label,
+                originalX: bbox.x + bbox.width / 2,
+                originalY: bbox.y + bbox.height / 2
+            };
+        });
+
+        // Apply collision avoidance
+        for (let i = 0; i < labelData.length; i++) {
+            for (let j = i + 1; j < labelData.length; j++) {
+                const label1 = labelData[i];
+                const label2 = labelData[j];
+                
+                const dx = label1.x - label2.x;
+                const dy = label1.y - label2.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                
+                const minDistance = Math.max(label1.width, label2.width) + 20;
+                
+                if (distance < minDistance && distance > 0) {
+                    // Calculate separation vector
+                    const separation = (minDistance - distance) / 2;
+                    const angle = Math.atan2(dy, dx);
+                    
+                    const offsetX = Math.cos(angle) * separation;
+                    const offsetY = Math.sin(angle) * separation;
+                    
+                    // Apply offset to labels
+                    label1.x += offsetX;
+                    label1.y += offsetY;
+                    label2.x -= offsetX;
+                    label2.y -= offsetY;
+                    
+                    // Update label positions
+                    this.updateLabelPosition(label1.element, label1.x, label1.y);
+                    this.updateLabelPosition(label2.element, label2.x, label2.y);
+                }
+            }
+        }
+    }
+
+    // Update the position of a specific label
+    updateLabelPosition(labelElement, x, y) {
+        const group = d3.select(labelElement);
+        const rect = group.select("rect");
+        const text = group.select("text");
+        
+        if (rect.node() && text.node()) {
+            const padding = 8;
+            const textWidth = text.text().length * 8;
+            const textHeight = 16;
+            
+            rect
+                .attr("x", x - (textWidth/2) - padding)
+                .attr("y", y - (textHeight/2) - padding/2);
+            
+            text
+                .attr("x", x)
+                .attr("y", y);
+        }
+    }
+
+    // Create a self-looping path for nodes that connect to themselves
+    createSelfLoopPath(d, loopIndex = 0) {
+        const nodeRadius = this.config.nodeRadius;
+        const baseLoopRadius = nodeRadius + 20; // Base loop radius
+        const loopSpacing = 15; // Spacing between concentric loops
+        const loopRadius = baseLoopRadius + (loopIndex * loopSpacing);
+        
+        // Calculate loop center (above the node)
+        const centerX = d.source.x;
+        const centerY = d.source.y - loopRadius;
+        
+        // Create a circular path that loops back to the node
+        // Start from the right side of the node, curve up and around, then back to the left side
+        const startX = d.source.x + nodeRadius;
+        const startY = d.source.y;
+        const endX = d.source.x - nodeRadius;
+        const endY = d.source.y;
+        
+        // Create a smooth arc that goes from right side, up and around, to left side
+        const path = `M${startX},${startY} A${loopRadius},${loopRadius} 0 1,1 ${endX},${endY}`;
+        
+        return path;
     }
 
     // Prepare data for the arrow diagram
     prepareDiagramData() {
-        const entities = window.helpers.createUniqueNodes(this.judicialEntityMapData);
+        const entities = window.helpers.createUniqueNodes(this.judicialEntityMapData, this.groupingData);
         const diagramLinks = window.helpers.createDiagramLinks(this.judicialEntityMapData, entities);
         
         // Store diagramLinks as class property for use in calculateNodeWeights
@@ -105,9 +367,16 @@ class LegalSystemVisualization {
             .data(diagramLinks)
             .enter()
             .append("path")
-            .attr("class", d => `link ${d.color}`)
-            .attr("marker-end", d => `url(#arrowhead-${d.color})`)
-            .attr("stroke", d => this.colorMap[d.color] || "#999")
+            .attr("class", d => `link`)
+            .attr("marker-end", d => {
+                const sourceColor = this.getNodeColor(d.source.name);
+                const markerId = `arrowhead-${sourceColor.replace('#', '')}`;
+                return `url(#${markerId})`;
+            })
+            .attr("stroke", d => {
+                const sourceColor = this.getNodeColor(d.source.name);
+                return sourceColor;
+            })
             .attr("fill", "none")
             .style("opacity", 0)
             .attr("stroke-width", 2);
@@ -127,12 +396,21 @@ class LegalSystemVisualization {
             .style("opacity", 0)
             .call(this.createDragBehavior());
 
-        // Add circles to nodes
+        // Add black center circle for each node (created first, so it's behind)
         this.nodeElements.append("circle")
+            .attr("class", "node-center")
             .attr("r", this.config.nodeRadius)
-            .style("fill", "#333")
+            .style("fill", "#000")
             .style("stroke", "#fff")
             .style("stroke-width", 2);
+        
+        // Add colored circle around each node (larger, group-colored, created second so it's on top)
+        this.nodeElements.append("circle")
+            .attr("class", "node-group-circle")
+            .attr("r", this.config.nodeRadius + 3)
+            .style("fill", "none")
+            .style("stroke", d => this.getNodeColor(d.name))
+            .style("stroke-width", 3);
 
         // Add text labels to nodes with intelligent positioning
         this.nodeElements.append("text")
@@ -224,9 +502,13 @@ class LegalSystemVisualization {
         // Show tethered labels for this node's relationships during drag
         this.showNodeRelationshipLabels(d);
         
+        // Update label positions more frequently during drag to maintain visibility
         if (!d._labelUpdateScheduled) {
             d._labelUpdateScheduled = true;
             this.updateRelationshipLabels();
+            
+            // Apply collision avoidance for labels during drag
+            this.avoidLabelCollisions();
             
             setTimeout(() => {
                 this.optimizeNodeLabelPositions();
@@ -363,6 +645,14 @@ class LegalSystemVisualization {
                     return "M0,0L0,0";
                 }
                 
+                // Check if this is a self-loop (source and target are the same)
+                if (d.source.id === d.target.id) {
+                    // Get the loop index for this self-loop
+                    const loopIndex = d.loopIndex || 0;
+                    return this.createSelfLoopPath(d, loopIndex);
+                }
+                
+                // Regular curved path for different nodes
                 const dx = d.target.x - d.source.x;
                 const dy = d.target.y - d.source.y;
                 const dr = Math.sqrt(dx * dx + dy * dy);
@@ -378,6 +668,8 @@ class LegalSystemVisualization {
         // Update relationship labels if they're visible
         if (this._labelsVisible) {
             this.updateRelationshipLabels();
+            // Apply collision avoidance for labels
+            this.avoidLabelCollisions();
         }
         
         // Optimize label positions more frequently to prevent overlaps
@@ -392,6 +684,7 @@ class LegalSystemVisualization {
     addInteractivity() {
         this.nodeElements
             .on("mouseover", (event, d) => {
+                event.stopPropagation(); // Prevent bubbling to background
                 const selectedNode = this.svg.attr("data-selected-node");
                 if (!selectedNode) {
                     this.showRelatedNodesOnHover(d);
@@ -400,6 +693,7 @@ class LegalSystemVisualization {
                 this.showNodeRelationshipLabels(d);
             })
             .on("mouseout", (event, d) => {
+                event.stopPropagation(); // Prevent bubbling to background
                 const selectedNode = this.svg.attr("data-selected-node");
                 if (!selectedNode) {
                     this.restoreNormalView();
@@ -410,6 +704,7 @@ class LegalSystemVisualization {
                 }
             })
             .on("click", (event, d) => {
+                event.stopPropagation(); // Prevent bubbling to background
                 if (this.filteredNodeId) {
                     this.clearNodeFilter();
                 }
@@ -417,6 +712,7 @@ class LegalSystemVisualization {
 
         this.linkElements
             .on("mouseover", (event, d) => {
+                event.stopPropagation(); // Prevent bubbling to background
                 const selectedNode = this.svg.attr("data-selected-node");
                 if (!selectedNode) {
                     this.showRelatedNodesOnHover(d.source);
@@ -433,6 +729,7 @@ class LegalSystemVisualization {
                 this.showTooltip(event, `${d.source.name} → ${d.target.name}: ${d.label}`);
             })
             .on("mouseout", (event, d) => {
+                event.stopPropagation(); // Prevent bubbling to background
                 const selectedNode = this.svg.attr("data-selected-node");
                 if (!selectedNode) {
                     this.restoreNormalView();
@@ -552,8 +849,235 @@ class LegalSystemVisualization {
     // Setup event listeners
     setupEventListeners() {
         document.getElementById("toggleViewBtn").addEventListener("click", () => this.toggleView());
+        document.getElementById("groupBtn").addEventListener("click", () => this.toggleGrouping());
         document.getElementById("nodeFilter").addEventListener("change", (event) => this.handleNodeFilter(event));
         document.getElementById("clearFilter").addEventListener("click", () => this.clearNodeFilter());
+    }
+
+    // Toggle between grouped and ungrouped view
+    toggleGrouping() {
+        if (this.isGrouped) {
+            this.expandGroups();
+        } else {
+            this.collapseToGroups();
+        }
+    }
+
+    // Collapse nodes into group circles
+    collapseToGroups() {
+        if (this.isGrouped || this.isAnimating) return;
+        
+        
+        this.isAnimating = true;
+        this.isGrouped = true;
+        
+        // Update button text
+        document.getElementById("groupBtn").textContent = "Ungroup Nodes";
+        
+        // Hide individual nodes and links
+        this.nodeElements
+            .transition()
+            .duration(500)
+            .style("opacity", 0);
+        
+        this.linkElements
+            .transition()
+            .duration(500)
+            .style("opacity", 0);
+        
+        // Hide labels
+        this.hideRelationshipLabel();
+        
+        // Create group circles
+        this.createGroupCircles();
+        
+        setTimeout(() => {
+            this.isAnimating = false;
+        }, 500);
+    }
+
+    // Expand groups back to individual nodes
+    expandGroups() {
+        if (!this.isGrouped || this.isAnimating) return;
+        
+        this.isAnimating = true;
+        this.isGrouped = false;
+        
+        // Update button text
+        document.getElementById("groupBtn").textContent = "Group Nodes";
+        
+        // Remove group circles
+        this.removeGroupCircles();
+        
+        // Show individual nodes and links
+        this.nodeElements
+            .transition()
+            .duration(500)
+            .style("opacity", 1);
+        
+        this.linkElements
+            .transition()
+            .duration(500)
+            .style("opacity", 1);
+        
+        setTimeout(() => {
+            this.isAnimating = false;
+        }, 500);
+    }
+
+    // Create group circles for each category
+    createGroupCircles() {
+        // Group nodes by their belongsTo category
+        const groups = {};
+        this.nodeElements.each(function(d) {
+            const groupKey = d.belongsTo || "Unknown";
+            if (!groups[groupKey]) {
+                groups[groupKey] = [];
+            }
+            groups[groupKey].push(d);
+        });
+        
+        // Create group circles
+        const groupData = Object.entries(groups).map(([groupKey, nodes]) => ({
+            key: groupKey,
+            nodes: nodes,
+            label: this.getGroupLabel(groupKey),
+            color: this.getGroupColor(groupKey),
+            x: this.config.width / 2,
+            y: this.config.height / 2 - 100
+        }));
+        
+        // Position groups in a circle
+        groupData.forEach((group, i) => {
+            const angle = (i / groupData.length) * 2 * Math.PI;
+            const radius = Math.min(this.config.width, this.config.height) * 0.25;
+            const centerX = this.config.width / 2;
+            const centerY = this.config.height / 2 - 100;
+            
+            group.x = centerX + Math.cos(angle) * radius;
+            group.y = centerY + Math.sin(angle) * radius;
+        });
+        
+        // Create group elements
+        this.groupElements = this.svg.selectAll(".group-circle")
+            .data(groupData)
+            .enter()
+            .append("g")
+            .attr("class", "group-circle")
+            .style("opacity", 0);
+        
+        // Add group circle background
+        this.groupElements.append("circle")
+            .attr("class", "group-background")
+            .attr("r", 60)
+            .style("fill", d => d.color)
+            .style("stroke", "#fff")
+            .style("stroke-width", 3)
+            .style("opacity", 0.8);
+        
+        // Add group circle border
+        this.groupElements.append("circle")
+            .attr("class", "group-border")
+            .attr("r", 65)
+            .style("fill", "none")
+            .style("stroke", d => d.color)
+            .style("stroke-width", 4);
+        
+        // Add group label
+        this.groupElements.append("text")
+            .attr("class", "group-label")
+            .attr("text-anchor", "middle")
+            .attr("dominant-baseline", "central")
+            .style("font-size", "14px")
+            .style("font-weight", "bold")
+            .style("fill", "#fff")
+            .style("text-shadow", "1px 1px 2px rgba(0,0,0,0.5)")
+            .text(d => d.label);
+        
+        // Add node count
+        this.groupElements.append("text")
+            .attr("class", "group-count")
+            .attr("text-anchor", "middle")
+            .attr("dominant-baseline", "central")
+            .attr("dy", 20)
+            .style("font-size", "12px")
+            .style("font-weight", "normal")
+            .style("fill", "#fff")
+            .style("text-shadow", "1px 1px 2px rgba(0,0,0,0.5)")
+            .text(d => `${d.nodes.length} nodes`);
+        
+        // Position and animate group circles
+        this.groupElements
+            .attr("transform", d => `translate(${d.x}, ${d.y})`)
+            .transition()
+            .duration(500)
+            .style("opacity", 1);
+        
+        // Add click functionality to group circles
+        this.groupElements
+            .style("cursor", "pointer")
+            .on("click", (event, d) => {
+                this.expandSpecificGroup(d);
+            });
+    }
+
+    // Remove group circles
+    removeGroupCircles() {
+        if (this.groupElements) {
+            this.groupElements
+                .transition()
+                .duration(500)
+                .style("opacity", 0)
+                .remove();
+            this.groupElements = null;
+        }
+    }
+
+    // Expand a specific group to show its nodes
+    expandSpecificGroup(groupData) {
+        if (this.isAnimating) return;
+        
+        this.isAnimating = true;
+        
+        // Remove all group circles
+        this.removeGroupCircles();
+        
+        // Show only the nodes from this group
+        this.nodeElements
+            .style("opacity", d => d.belongsTo === groupData.key ? 1 : 0);
+        
+        this.linkElements
+            .style("opacity", d => {
+                const sourceGroup = d.source.belongsTo;
+                const targetGroup = d.target.belongsTo;
+                return (sourceGroup === groupData.key || targetGroup === groupData.key) ? 1 : 0;
+            });
+        
+        // Update button to show we're in expanded view
+        document.getElementById("groupBtn").textContent = "Show All Groups";
+        
+        // Add a back button or modify the group button behavior
+        setTimeout(() => {
+            this.isAnimating = false;
+        }, 500);
+    }
+
+    // Get group label from group key
+    getGroupLabel(groupKey) {
+        const groupLabels = {
+            ":LegislativeAndRegulatory": "Legislative & Regulatory",
+            ":JudiciaryGroup": "Judiciary",
+            ":TribunalsAndArbitrationGroup": "Tribunals & Arbitration",
+            ":PeopleAndOfficeholdersGroup": "People & Officeholders",
+            ":LegalFrameworkGroup": "Legal Framework",
+            ":NonAdministrativeEntitiesGroup": "Non-Administrative"
+        };
+        return groupLabels[groupKey] || groupKey.replace(":", "");
+    }
+
+    // Get group color from group key
+    getGroupColor(groupKey) {
+        return this.groupColors[groupKey] || "#999999";
     }
 
     // Setup filter dropdown
@@ -710,9 +1234,8 @@ class LegalSystemVisualization {
         this.nodeElements.filter(d => connectedNodeIds.has(d.id))
             .style("opacity", 1)
             .style("z-index", 10)
-            .select("circle")
-            .style("stroke-width", 4)
-            .style("stroke", "#ff6b35")
+            .select(".node-group-circle")
+            .style("stroke-width", 5)
             .style("filter", "drop-shadow(0 0 6px rgba(255, 107, 53, 0.6))");
         
         // Enhance connected node labels with larger font and background
@@ -730,9 +1253,8 @@ class LegalSystemVisualization {
         this.nodeElements.filter(d => d.id === selectedNode.id)
             .style("opacity", 1)
             .style("z-index", 20)
-            .select("circle")
-            .style("stroke-width", 5)
-            .style("stroke", "#ff0000")
+            .select(".node-group-circle")
+            .style("stroke-width", 6)
             .style("filter", "drop-shadow(0 0 10px rgba(255, 0, 0, 0.8))");
         
         // Enhance selected node label with largest font and strong background
@@ -761,8 +1283,15 @@ class LegalSystemVisualization {
         // Reset all elements to normal state
         this.nodeElements
             .style("opacity", 1)
-            .style("z-index", 1)
-            .select("circle")
+            .style("z-index", 1);
+        
+        // Reset node group circles to normal styling
+        this.nodeElements.select(".node-group-circle")
+            .style("stroke-width", 3)
+            .style("filter", "none");
+        
+        // Reset node center circles to normal styling
+        this.nodeElements.select(".node-center")
             .style("stroke-width", 2)
             .style("stroke", "#fff")
             .style("filter", "none");
@@ -816,10 +1345,24 @@ class LegalSystemVisualization {
         console.log("Total connected links found:", connectedLinks.length);
         console.log("About to create labels, _labelsVisible is:", this._labelsVisible);
         
-        // Create simple visible labels for testing
-        connectedLinks.forEach((linkData, i) => {
-            console.log("Creating label", i, "_labelsVisible is:", this._labelsVisible);
-            this.createSimpleLabel(linkData.link, linkData.element, i);
+        // Group links by their source-target pair to handle multiple labels on same arrow
+        const linkGroups = {};
+        connectedLinks.forEach(linkData => {
+            const linkKey = `${linkData.link.source.id}-${linkData.link.target.id}`;
+            if (!linkGroups[linkKey]) {
+                linkGroups[linkKey] = [];
+            }
+            linkGroups[linkKey].push(linkData);
+        });
+        
+        // Create labels with proper stacking for each group
+        let globalIndex = 0;
+        Object.values(linkGroups).forEach(linkGroup => {
+            linkGroup.forEach((linkData, localIndex) => {
+                console.log("Creating label", globalIndex, "_labelsVisible is:", this._labelsVisible);
+                this.createSimpleLabel(linkData.link, linkData.element, globalIndex);
+                globalIndex++;
+            });
         });
     }
 
@@ -836,14 +1379,22 @@ class LegalSystemVisualization {
         // Remove any existing arrow relationship labels
         this.svg.selectAll(".arrow-relationship-label").remove();
         
-        // Get midpoint of the link
-        const sourceX = linkData.source.x;
-        const sourceY = linkData.source.y;
-        const targetX = linkData.target.x;
-        const targetY = linkData.target.y;
+        // Get position along the curved path instead of straight line midpoint
+        const pathElement = d3.select(linkElement);
+        const pathLength = pathElement.node().getTotalLength();
         
-        const midX = (sourceX + targetX) / 2;
-        const midY = (sourceY + targetY) / 2;
+        // For self-loops, position the label at the top of the loop
+        let midPoint;
+        if (linkData.source.id === linkData.target.id) {
+            // For self-loops, get the point at the top of the arc (around 25% of the path)
+            midPoint = pathElement.node().getPointAtLength(pathLength * 0.25);
+        } else {
+            // For regular links, use the midpoint
+            midPoint = pathElement.node().getPointAtLength(pathLength * 0.5);
+        }
+        
+        const midX = midPoint.x;
+        const midY = midPoint.y;
         
         // Create a simple group for the arrow label
         const group = this.svg.append("g")
@@ -890,16 +1441,29 @@ class LegalSystemVisualization {
             return;
         }
         
-        // Get midpoint of the link
-        const sourceX = linkData.source.x;
-        const sourceY = linkData.source.y;
-        const targetX = linkData.target.x;
-        const targetY = linkData.target.y;
+        // Get position along the curved path instead of straight line midpoint
+        const pathElement = d3.select(linkElement);
+        const pathLength = pathElement.node().getTotalLength();
         
-        const midX = (sourceX + targetX) / 2;
-        const midY = (sourceY + targetY) / 2;
+        // For self-loops, position the label at the top of the loop
+        let midPoint;
+        if (linkData.source.id === linkData.target.id) {
+            // For self-loops, get the point at the top of the arc (around 25% of the path)
+            midPoint = pathElement.node().getPointAtLength(pathLength * 0.25);
+        } else {
+            // For regular links, use the midpoint
+            midPoint = pathElement.node().getPointAtLength(pathLength * 0.5);
+        }
         
-        console.log("Creating label at position:", midX, midY, "for label:", linkData.label);
+        // Calculate vertical offset for stacking multiple labels
+        const labelSpacing = 25; // Vertical spacing between labels
+        const verticalOffset = index * labelSpacing;
+        
+        // Calculate the final position with vertical stacking
+        const finalX = midPoint.x;
+        const finalY = midPoint.y + verticalOffset;
+        
+        console.log("Creating label at position:", finalX, finalY, "for label:", linkData.label, "index:", index);
         
         // Create a simple group
         const group = this.svg.append("g")
@@ -917,8 +1481,8 @@ class LegalSystemVisualization {
         const textHeight = 16;
         
         const rect = group.append("rect")
-            .attr("x", midX - (textWidth/2) - padding)
-            .attr("y", midY - (textHeight/2) - padding/2)
+            .attr("x", finalX - (textWidth/2) - padding)
+            .attr("y", finalY - (textHeight/2) - padding/2)
             .attr("width", textWidth + (padding * 2))
             .attr("height", textHeight + padding)
             .style("fill", "rgba(255, 255, 255, 1.0)")
@@ -927,12 +1491,12 @@ class LegalSystemVisualization {
             .style("rx", 4)
             .style("filter", "drop-shadow(0 2px 4px rgba(0,0,0,0.3))");
         
-        console.log("Rectangle created at:", midX - (textWidth/2) - padding, midY - (textHeight/2) - padding/2);
+        console.log("Rectangle created at:", finalX - (textWidth/2) - padding, finalY - (textHeight/2) - padding/2);
         
         // Create text label
         const text = group.append("text")
-            .attr("x", midX)
-            .attr("y", midY)
+            .attr("x", finalX)
+            .attr("y", finalY)
             .attr("text-anchor", "middle")
             .attr("dominant-baseline", "central")
             .style("font-size", "12px")
@@ -1030,41 +1594,91 @@ class LegalSystemVisualization {
             return;
         }
         
-        this.svg.selectAll(".relationship-label-group").each(function() {
+        // Group labels by their source-target pair to handle stacking
+        const labelGroups = {};
+        
+        this.svg.selectAll(".relationship-label-group").each(function(d, i) {
             const group = d3.select(this);
             const linkData = group.datum();
             
             if (!linkData || !linkData.source || !linkData.target) return;
             
-            // Calculate midpoint of current link positions
-            const sourceX = linkData.source.x;
-            const sourceY = linkData.source.y;
-            const targetX = linkData.target.x;
-            const targetY = linkData.target.y;
-            
-            const midX = (sourceX + targetX) / 2;
-            const midY = (sourceY + targetY) / 2;
-            
-            // Update labelbox position
-            const rect = group.select("rect");
-            const text = group.select("text");
-            
-            if (rect.node()) {
-                const padding = 8;
-                const textWidth = linkData.label.length * 8;
-                const textHeight = 16;
+            const linkKey = `${linkData.source.id}-${linkData.target.id}`;
+            if (!labelGroups[linkKey]) {
+                labelGroups[linkKey] = [];
+            }
+            labelGroups[linkKey].push({ group, linkData, index: i });
+        });
+        
+        // Update each group of labels with proper stacking
+        Object.values(labelGroups).forEach(labelGroup => {
+            labelGroup.forEach(({ group, linkData, index }) => {
+                // Find the corresponding link element to get the curved path
+                const linkElement = this.linkElements.filter(d => 
+                    d.source.id === linkData.source.id && d.target.id === linkData.target.id
+                ).node();
                 
-                rect
-                    .attr("x", midX - (textWidth/2) - padding)
-                    .attr("y", midY - (textHeight/2) - padding/2);
-            }
-            
-            if (text.node()) {
-                text
-                    .attr("x", midX)
-                    .attr("y", midY);
-            }
-            
+                let finalX, finalY;
+                
+                if (linkElement) {
+                    // Get position along the curved path
+                    const pathElement = d3.select(linkElement);
+                    const pathLength = pathElement.node().getTotalLength();
+                    
+                    // For self-loops, position the label at the top of the loop
+                    let midPoint;
+                    if (linkData.source.id === linkData.target.id) {
+                        // For self-loops, get the point at the top of the arc (around 25% of the path)
+                        midPoint = pathElement.node().getPointAtLength(pathLength * 0.25);
+                    } else {
+                        // For regular links, use the midpoint
+                        midPoint = pathElement.node().getPointAtLength(pathLength * 0.5);
+                    }
+                    
+                    // Calculate vertical offset for stacking multiple labels
+                    const labelSpacing = 25; // Vertical spacing between labels
+                    const verticalOffset = index * labelSpacing;
+                    
+                    // Calculate the final position with vertical stacking
+                    finalX = midPoint.x;
+                    finalY = midPoint.y + verticalOffset;
+                } else {
+                    // Fallback to straight line midpoint if link element not found
+                    const sourceX = linkData.source.x;
+                    const sourceY = linkData.source.y;
+                    const targetX = linkData.target.x;
+                    const targetY = linkData.target.y;
+                    
+                    const midX = (sourceX + targetX) / 2;
+                    const midY = (sourceY + targetY) / 2;
+                    
+                    const labelSpacing = 25;
+                    const verticalOffset = index * labelSpacing;
+                    
+                    finalX = midX;
+                    finalY = midY + verticalOffset;
+                }
+                
+                // Update labelbox position
+                const rect = group.select("rect");
+                const text = group.select("text");
+                
+                if (rect.node()) {
+                    const padding = 8;
+                    const textWidth = linkData.label.length * 8;
+                    const textHeight = 16;
+                    
+                    rect
+                        .attr("x", finalX - (textWidth/2) - padding)
+                        .attr("y", finalY - (textHeight/2) - padding/2);
+                }
+                
+                if (text.node()) {
+                    text
+                        .attr("x", finalX)
+                        .attr("y", finalY);
+                }
+            });
         });
     }
 
@@ -1206,8 +1820,15 @@ class LegalSystemVisualization {
             .style("opacity", 1)
             .style("z-index", 1);
         
-        // Restore node circles to normal styling
-        this.nodeElements.select("circle")
+        // Restore node group circles to normal styling
+        this.nodeElements.select(".node-group-circle")
+            .transition()
+            .duration(200)
+            .style("stroke-width", 3)
+            .style("filter", "none");
+        
+        // Restore node center circles to normal styling
+        this.nodeElements.select(".node-center")
             .transition()
             .duration(200)
             .style("stroke-width", 2)

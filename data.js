@@ -1,137 +1,197 @@
 // Data Layer - Simple separation of data from logic
 // This file contains only the data for the legal system relationships
 
+// Grouping data for collapsible clusters
+const groupingData = [
+    { node: "Parliament", label: ":LegislativeBody", belongsTo: ":LegislativeAndRegulatory" },
+    { node: "Ministry of Law & Justice (DoJ)", label: ":RegulatoryBody", belongsTo: ":LegislativeAndRegulatory" },
+    { node: "State Governments", label: ":RegulatoryBody", belongsTo: ":LegislativeAndRegulatory" },
+    { node: "Collegium", label: ":JudicialAppointmentBody", belongsTo: ":LegislativeAndRegulatory" },
+    { node: "Supreme Court", label: ":Judiciary", belongsTo: ":JudiciaryGroup" },
+    { node: "High Courts", label: ":Judiciary", belongsTo: ":JudiciaryGroup" },
+    { node: "Subordinate Courts", label: ":Judiciary", belongsTo: ":JudiciaryGroup" },
+    { node: "Appellate Tribunal", label: ":Judiciary", belongsTo: ":JudiciaryGroup" },
+    { node: "Tribunals", label: ":TribunalBody", belongsTo: ":TribunalsAndArbitrationGroup" },
+    { node: "Arbitration Centres", label: ":ArbitrationInstitution", belongsTo: ":TribunalsAndArbitrationGroup" },
+    { node: "Arbitration Council of India", label: ":RegulatoryBody", belongsTo: ":TribunalsAndArbitrationGroup" },
+    { node: "Judicial Officers", label: ":People", belongsTo: ":PeopleAndOfficeholdersGroup" },
+    { node: "Tribunal Members", label: ":People", belongsTo: ":PeopleAndOfficeholdersGroup" },
+    { node: "Tribunal Chairs", label: ":People", belongsTo: ":PeopleAndOfficeholdersGroup" },
+    { node: "Arbitrators", label: ":People", belongsTo: ":PeopleAndOfficeholdersGroup" },
+    { node: "Administrative Staff", label: ":People", belongsTo: ":PeopleAndOfficeholdersGroup" },
+    { node: "Court Procedures", label: ":LegalProcedure", belongsTo: ":LegalFrameworkGroup" },
+    { node: "Tribunal Law and Rules", label: ":LegalProcedure", belongsTo: ":LegalFrameworkGroup" },
+    { node: "Arbitration Act and Rules", label: ":LegalProcedure", belongsTo: ":LegalFrameworkGroup" },
+    { node: "Appointment Procedures", label: ":LegalProcedure", belongsTo: ":LegalFrameworkGroup" },
+    { node: "Oversight Mechanisms", label: ":LegalProcedure", belongsTo: ":LegalFrameworkGroup" },
+    { node: "President of India", label: ":ConstitutionalAuthority", belongsTo: ":NonAdministrativeEntitiesGroup" },
+    { node: "Governor of State", label: ":ConstitutionalAuthority", belongsTo: ":NonAdministrativeEntitiesGroup" },
+    { node: "Council of Ministers", label: ":ConstitutionalAuthority", belongsTo: ":NonAdministrativeEntitiesGroup" },
+    { node: "PM", label: ":ConstitutionalAuthority", belongsTo: ":NonAdministrativeEntitiesGroup" },
+    { node: "Laws governing Tribunals", label: ":LegalProcedure", belongsTo: ":LegalFrameworkGroup" },
+    { node: "Laws governing Arbitration", label: ":LegalProcedure", belongsTo: ":LegalFrameworkGroup" },
+    { node: "Sponsoring Ministry", label: ":RegulatoryBody", belongsTo: ":LegislativeAndRegulatory" },
+    { node: "National Tribunals Commission", label: ":RegulatoryBody", belongsTo: ":LegislativeAndRegulatory" },
+    { node: "CPC", label: ":LegalProcedure", belongsTo: ":LegalFrameworkGroup" },
+    { node: "CrPC", label: ":LegalProcedure", belongsTo: ":LegalFrameworkGroup" },
+    { node: "District Judges", label: ":People", belongsTo: ":PeopleAndOfficeholdersGroup" },
+    { node: "Subordinate Officers", label: ":People", belongsTo: ":PeopleAndOfficeholdersGroup" },
+    
+    // Additional missing nodes from judicialEntityMapData
+    { node: "Supreme Court Judges", label: ":People", belongsTo: ":PeopleAndOfficeholdersGroup" },
+    { node: "High Court Judges", label: ":People", belongsTo: ":PeopleAndOfficeholdersGroup" },
+    { node: "Registry", label: ":AdministrativeBody", belongsTo: ":LegalFrameworkGroup" },
+    { node: "Arbitration Awards", label: ":LegalDocument", belongsTo: ":LegalFrameworkGroup" },
+    { node: "Establishment of Tribunal Oversight Bodies", label: ":AdministrativeBody", belongsTo: ":LegalFrameworkGroup" },
+    { node: "Appellate Tribunals", label: ":TribunalBody", belongsTo: ":TribunalsAndArbitrationGroup" },
+    { node: "Arbitration Proceedings", label: ":LegalProcedure", belongsTo: ":LegalFrameworkGroup" },
+    { node: "Central Govt (Search Committee)", label: ":RegulatoryBody", belongsTo: ":LegislativeAndRegulatory" },
+    { node: "State Legislatures", label: ":LegislativeBody", belongsTo: ":LegislativeAndRegulatory" },
+    { node: "Legislation (Laws, Rules, Procedures)", label: ":LegalDocument", belongsTo: ":LegalFrameworkGroup" },
+    
+    // Additional nodes from new relationships
+    { node: "Search-cum-Selection Committee", label: ":AdministrativeBody", belongsTo: ":LegalFrameworkGroup" }
+];
+
 const judicialEntityMapData = [
-    // Parliament relationships - OUTGOING (Blue)
-    { source: "Parliament", target: "Court Procedure", count: 1, color: "outgoing", label: "enacts/amends" },
-    { source: "Parliament", target: "Tribunal", count: 1, color: "outgoing", label: "establishes" },
-    { source: "Parliament", target: "Arbitration Centre", count: 1, color: "outgoing", label: "establishes" },
-    { source: "Parliament", target: "Ministry of Law & Justice (DoJ)", count: 1, color: "outgoing", label: "provides_funds" },
-    { source: "Parliament", target: "Tribunal", count: 1, color: "outgoing", label: "oversees" },
-    { source: "Parliament", target: "Arbitration Centre", count: 1, color: "outgoing", label: "oversees" },
-    { source: "Parliament", target: "Ministry of Law & Justice (DoJ)", count: 1, color: "outgoing", label: "oversees" },
-    { source: "Parliament", target: "CPC / CrPC / Tribunal Law / Arbitration Act", count: 1, color: "outgoing", label: "amends" },
+    // Parliament relationships
+    { source: "Parliament", target: "Legislation (Laws, Rules, Procedures)", count: 1, label: "enacts/amends" },
+    { source: "Parliament", target: "Tribunals", count: 1, label: "establishes" },
+    { source: "Parliament", target: "Arbitration Centres", count: 1, label: "establishes" },
+    { source: "Parliament", target: "Ministry of Law & Justice (DoJ)", count: 1, label: "funds" },
+    { source: "Parliament", target: "Ministry of Law & Justice (DoJ)", count: 1, label: "oversees" },
+    { source: "Parliament", target: "Tribunals", count: 1, label: "oversees" },
+    { source: "Parliament", target: "Arbitration Centres", count: 1, label: "oversees" },
     
-    // Ministry of Law & Justice relationships - OUTGOING (Blue)
-    { source: "Ministry of Law & Justice (DoJ)", target: "Supreme Court", count: 1, color: "outgoing", label: "provides_funds" },
-    { source: "Ministry of Law & Justice (DoJ)", target: "High Court", count: 1, color: "outgoing", label: "provides_funds" },
-    { source: "Ministry of Law & Justice (DoJ)", target: "Subordinate Courts", count: 1, color: "outgoing", label: "provides_funds" },
-    { source: "Ministry of Law & Justice (DoJ)", target: "Tribunal", count: 1, color: "outgoing", label: "provides_funds" },
-    { source: "Ministry of Law & Justice (DoJ)", target: "Arbitration Centre", count: 1, color: "outgoing", label: "provides_funds" },
-    { source: "Ministry of Law & Justice (DoJ)", target: "Parliament", count: 1, color: "incoming", label: "accountable_to" },
-    { source: "Ministry of Law & Justice (DoJ)", target: "Supreme/High Court Judges", count: 1, color: "outgoing", label: "processes_appointments" },
-    { source: "Ministry of Law & Justice (DoJ)", target: "Arbitration Council of India", count: 1, color: "outgoing", label: "administers" },
-    { source: "Ministry of Law & Justice (DoJ)", target: "State Government", count: 1, color: "outgoing", label: "coordinates_with" },
+    // Ministry of Law & Justice (DoJ) relationships
+    { source: "Ministry of Law & Justice (DoJ)", target: "Supreme Court", count: 1, label: "allocates_funds" },
+    { source: "Ministry of Law & Justice (DoJ)", target: "High Courts", count: 1, label: "allocates_funds" },
+    { source: "Ministry of Law & Justice (DoJ)", target: "Subordinate Courts", count: 1, label: "allocates_funds" },
+    { source: "Ministry of Law & Justice (DoJ)", target: "Tribunals", count: 1, label: "allocates_funds" },
+    { source: "Ministry of Law & Justice (DoJ)", target: "Arbitration Centres", count: 1, label: "allocates_funds" },
+    { source: "Ministry of Law & Justice (DoJ)", target: "Supreme Court Judges", count: 1, label: "processes_appointments" },
+    { source: "Ministry of Law & Justice (DoJ)", target: "High Court Judges", count: 1, label: "processes_appointments" },
+    { source: "Ministry of Law & Justice (DoJ)", target: "Arbitration Council of India", count: 1, label: "administers" },
+    { source: "Ministry of Law & Justice (DoJ)", target: "State Governments", count: 1, label: "coordinates_with" },
     
-    // Supreme Court relationships - OUTGOING (Blue)
-    { source: "Supreme Court", target: "Court Procedure", count: 1, color: "outgoing", label: "frames_rules" },
-    { source: "Supreme Court", target: "Own Registry", count: 1, color: "outgoing", label: "governs" },
-    { source: "Supreme Court", target: "Tribunal Decision", count: 1, color: "outgoing", label: "appellate_supervision" },
-    { source: "Supreme Court", target: "Arbitration Award", count: 1, color: "outgoing", label: "appellate_supervision" },
-    { source: "Supreme Court", target: "High Court Judge", count: 1, color: "outgoing", label: "appoints (via collegium)" },
-    { source: "Supreme Court", target: "Tribunal Law / Arbitration Law", count: 1, color: "outgoing", label: "reviews" },
-    { source: "Supreme Court", target: "Establishment of Tribunal Oversight Bodies", count: 1, color: "outgoing", label: "directs/mandates" },
+    // Supreme Court relationships
+    { source: "Supreme Court", target: "Supreme Court", count: 1, label: "frames_rules" },
+    { source: "Supreme Court", target: "Supreme Court", count: 1, label: "self_governs" },
+    { source: "Supreme Court", target: "Registry", count: 1, label: "governs" },
+    { source: "Supreme Court", target: "Tribunals", count: 1, label: "supervises" },
+    { source: "Supreme Court", target: "Arbitration Awards", count: 1, label: "supervises" },
+    { source: "Supreme Court", target: "High Court Judges", count: 1, label: "appoints" },
+    { source: "Supreme Court", target: "Laws governing Tribunals", count: 1, label: "reviews" },
+    { source: "Supreme Court", target: "Laws governing Arbitration", count: 1, label: "reviews" },
+    { source: "Supreme Court", target: "Establishment of Tribunal Oversight Bodies", count: 1, label: "directs/mandates" },
     
-    // Collegium relationships - OUTGOING (Blue)
-    { source: "Collegium", target: "Supreme Court / High Court Judges", count: 1, color: "outgoing", label: "recommends_appointments" },
-    { source: "Collegium", target: "High Court Judges", count: 1, color: "outgoing", label: "recommends_transfers" },
+    // Collegium relationships
+    { source: "Collegium", target: "Supreme Court Judges", count: 1, label: "recommends_appointments" },
+    { source: "Collegium", target: "High Court Judges", count: 1, label: "recommends_appointments" },
     
-    // High Courts relationships - OUTGOING (Blue)
-    { source: "High Courts", target: "Court Procedure", count: 1, color: "outgoing", label: "frames_rules" },
-    { source: "High Courts", target: "Subordinate Courts", count: 1, color: "outgoing", label: "superintends" },
-    { source: "High Courts", target: "Judicial Officers", count: 1, color: "outgoing", label: "controls" },
-    { source: "High Courts", target: "Tribunal Decision", count: 1, color: "outgoing", label: "appellate_supervision" },
-    { source: "High Courts", target: "Arbitration Award", count: 1, color: "outgoing", label: "appellate_supervision" },
+    // High Courts relationships
+    { source: "High Courts", target: "High Courts", count: 1, label: "frames_rules" },
+    { source: "High Courts", target: "High Courts", count: 1, label: "self_regulates" },
+    { source: "High Courts", target: "Subordinate Courts", count: 1, label: "superintends" },
+    { source: "High Courts", target: "Judicial Officers", count: 1, label: "controls" },
+    { source: "High Courts", target: "Tribunals", count: 1, label: "supervises" },
+    { source: "High Courts", target: "Arbitration Awards", count: 1, label: "supervises" },
     
-    // State Government relationships - OUTGOING (Blue)
-    { source: "State Government", target: "Judicial Officers / Subordinate Courts", count: 1, color: "outgoing", label: "pays_salaries" },
-    { source: "State Government", target: "Subordinate Courts", count: 1, color: "outgoing", label: "funds" },
-    { source: "State Government", target: "Judicial Officers", count: 1, color: "outgoing", label: "appoints (through exam)" },
-    { source: "State Government", target: "State Legislature", count: 1, color: "incoming", label: "accountable_to" },
+    // State Governments relationships
+    { source: "State Governments", target: "Subordinate Courts", count: 1, label: "funds" },
+    { source: "State Governments", target: "Judicial Officers", count: 1, label: "funds" },
+    { source: "State Governments", target: "Judicial Officers", count: 1, label: "appoints" },
+    { source: "State Governments", target: "State Legislatures", count: 1, label: "accountable_to" },
     
-    // Tribunal relationships - OUTGOING (Blue)
-    { source: "Tribunal", target: "Tribunal Law / Tribunal Rules", count: 1, color: "outgoing", label: "applies" },
-    { source: "Tribunal", target: "Dispute (type-specific)", count: 1, color: "outgoing", label: "adjudicates" },
-    { source: "Tribunal", target: "Central Govt (Search-cum-Selection Committee)", count: 1, color: "outgoing", label: "appoints/members" },
-    { source: "Tribunal", target: "Sponsoring Ministry / Parliament", count: 1, color: "incoming", label: "accountable_to" },
-    { source: "Tribunal", target: "Sponsoring Ministry / National Tribunals Commission", count: 1, color: "incoming", label: "reports_to" },
-    { source: "Tribunal", target: "High Court / Supreme Court", count: 1, color: "incoming", label: "is_appellable_to" },
+    // Appellate Tribunals relationships
+    { source: "Appellate Tribunals", target: "Appeals from Tribunals", count: 1, label: "adjudicates" },
+    { source: "Appellate Tribunals", target: "Central Govt (Search Committee)", count: 1, label: "appoints_members" },
+    { source: "Appellate Tribunals", target: "Sponsoring Ministry", count: 1, label: "accountable_to" },
+    { source: "Appellate Tribunals", target: "Parliament", count: 1, label: "accountable_to" },
+    { source: "Appellate Tribunals", target: "Sponsoring Ministry", count: 1, label: "reports_to" },
+    { source: "Appellate Tribunals", target: "National Tribunals Commission", count: 1, label: "reports_to" },
+    { source: "Appellate Tribunals", target: "High Courts", count: 1, label: "appellate_to" },
+    { source: "Appellate Tribunals", target: "Supreme Court", count: 1, label: "appellate_to" },
     
-    // Arbitration Centre relationships - OUTGOING (Blue)
-    { source: "Arbitration Centre", target: "Arbitration Proceedings", count: 1, color: "outgoing", label: "administers" },
-    { source: "Arbitration Centre", target: "Arbitration Act / Notified Regulations", count: 1, color: "outgoing", label: "operates_under" },
-    { source: "Arbitration Centre", target: "Parties / Chairperson", count: 1, color: "outgoing", label: "appoints/arbitrators" },
-    { source: "Arbitration Centre", target: "Ministry of Law & Justice / Arbitration Council of India", count: 1, color: "incoming", label: "accountable_to" },
-    { source: "Arbitration Centre", target: "Arbitral Awards", count: 1, color: "outgoing", label: "maintains_repository" },
+    // Tribunals relationships
+    { source: "Tribunals", target: "Disputes", count: 1, label: "adjudicates" },
+    { source: "Tribunals", target: "Central Govt (Search Committee)", count: 1, label: "appoints_members" },
+    { source: "Tribunals", target: "Sponsoring Ministry", count: 1, label: "accountable_to" },
+    { source: "Tribunals", target: "Parliament", count: 1, label: "accountable_to" },
+    { source: "Tribunals", target: "Sponsoring Ministry", count: 1, label: "reports_to" },
+    { source: "Tribunals", target: "National Tribunals Commission", count: 1, label: "reports_to" },
+    { source: "Tribunals", target: "Appellate Tribunals", count: 1, label: "appellate_to" },
     
-    // Arbitration Council of India relationships - OUTGOING (Blue)
-    { source: "Arbitration Council of India", target: "Arbitration Centres / Arbitrators", count: 1, color: "outgoing", label: "regulates" },
-    { source: "Arbitration Council of India", target: "Depository of Awards / Accreditation", count: 1, color: "outgoing", label: "promotes_transparency" },
+    // Arbitration Centres relationships
+    { source: "Arbitration Centres", target: "Arbitration Proceedings", count: 1, label: "administer" },
+    { source: "Arbitration Centres", target: "Ministry of Law & Justice (DoJ)", count: 1, label: "accountable_to" },
+    { source: "Arbitration Centres", target: "Arbitration Council of India", count: 1, label: "accountable_to" },
     
-    // Arbitral Tribunal relationships - OUTGOING (Blue)
-    { source: "Arbitral Tribunal", target: "Arbitration Matters", count: 1, color: "outgoing", label: "adjudicates" },
-    { source: "Arbitral Tribunal", target: "Arbitration Award", count: 1, color: "outgoing", label: "awards" },
-    { source: "Arbitral Tribunal", target: "Arbitration Centre / Council", count: 1, color: "incoming", label: "accountable_to" },
+    // Arbitration Councils relationships
+    { source: "Arbitration Council of India", target: "Arbitration Centres", count: 1, label: "regulate" },
+    { source: "Arbitration Council of India", target: "Arbitrators", count: 1, label: "regulate" },
     
-    // Arbitration Award relationships - INCOMING (Red)
-    { source: "Arbitration Award", target: "High Court / Supreme Court", count: 1, color: "incoming", label: "is_appellable_to" },
+    // Judicial Officers relationships
+    { source: "Judicial Officers", target: "Subordinate Courts", count: 1, label: "administer" },
+    { source: "Judicial Officers", target: "High Courts", count: 1, label: "regulated_by" },
+    { source: "Judicial Officers", target: "CPC", count: 1, label: "regulated_by" },
+    { source: "Judicial Officers", target: "CrPC", count: 1, label: "regulated_by" },
     
-    // Search-cum-Selection Committee relationships - OUTGOING (Blue)
-    { source: "Search-cum-Selection Committee", target: "Tribunal Member / Chair", count: 1, color: "outgoing", label: "recommends" },
+    // Subordinate Courts relationships
+    { source: "Subordinate Courts", target: "High Courts", count: 1, label: "governed_by" },
+    { source: "Subordinate Courts", target: "CPC", count: 1, label: "governed_by" },
+    { source: "Subordinate Courts", target: "CrPC", count: 1, label: "governed_by" },
     
-    // Judicial Officers relationships - OUTGOING (Blue)
-    { source: "Judicial Officers", target: "Subordinate Courts", count: 1, color: "outgoing", label: "administers" },
-    { source: "Judicial Officers", target: "High Court Rules / CPC / CrPC", count: 1, color: "incoming", label: "regulated_by" },
+    // President of India relationships
+    { source: "President of India", target: "Supreme Court Judges", count: 1, label: "appoints" },
+    { source: "President of India", target: "High Court Judges", count: 1, label: "appoints" },
+    { source: "President of India", target: "Council of Ministers", count: 1, label: "acts_on_advice_of" },
+    { source: "President of India", target: "PM", count: 1, label: "acts_on_advice_of" },
     
-    // Subordinate Courts relationships - INCOMING (Red)
-    { source: "Subordinate Courts", target: "High Court Rules / CPC / CrPC", count: 1, color: "incoming", label: "governed_by" },
+    // Governor of State relationships
+    { source: "Governor of State", target: "District Judges", count: 1, label: "appoints" },
+    { source: "Governor of State", target: "Subordinate Officers", count: 1, label: "appoints" },
     
-    // Tribunal Law / Rules relationships - INCOMING (Red)
-    { source: "Tribunal Law / Rules", target: "Parliament", count: 1, color: "incoming", label: "enacted_by/amended_by" },
+    // Council of Ministers relationships
+    { source: "Council of Ministers", target: "President of India", count: 1, label: "advises" },
     
-    // Arbitration Act / Rules relationships - INCOMING (Red)
-    { source: "Arbitration Act / Rules", target: "Parliament", count: 1, color: "incoming", label: "enacted_by/amended_by" },
+    // PM relationships
+    { source: "PM", target: "President of India", count: 1, label: "advises" },
     
-    // Bar Council of India relationships - OUTGOING (Blue)
-    { source: "Bar Council of India", target: "Advocates", count: 1, color: "outgoing", label: "regulates" },
-    { source: "Bar Council of India", target: "Advocates", count: 1, color: "outgoing", label: "supervises/discipline" },
-    { source: "Bar Council of India", target: "Advocates", count: 1, color: "outgoing", label: "confers/practice_certificate" },
-    { source: "Bar Council of India", target: "Disciplinary Committee Orders", count: 1, color: "outgoing", label: "hears_appeals" },
+    // New hierarchical and organizational relationships
+    // Judicial hierarchy relationships
+    { source: "Supreme Court Judges", target: "Supreme Court", count: 1, label: "belongs_to" },
+    { source: "High Court Judges", target: "High Courts", count: 1, label: "belongs_to" },
+    { source: "District Judges", target: "Subordinate Courts", count: 1, label: "belongs_to" },
+    { source: "Judicial Officers", target: "Subordinate Courts", count: 1, label: "belongs_to" },
+    { source: "Judicial Officers", target: "High Courts", count: 1, label: "oversight_by" },
     
-    // Supreme Court / High Court relationships - OUTGOING (Blue)
-    { source: "Supreme Court / High Court", target: "Senior Advocates", count: 1, color: "outgoing", label: "designates" },
-    { source: "Supreme Court / High Court", target: "Arbitrator (if parties/institution fail)", count: 1, color: "outgoing", label: "appoints (under Arbitration Act S.11)" },
+    // Tribunal and arbitration relationships
+    { source: "Tribunal Members", target: "Tribunals", count: 1, label: "belongs_to" },
+    { source: "Tribunal Chairs", target: "Tribunals", count: 1, label: "belongs_to" },
+    { source: "Tribunal Members", target: "Appellate Tribunals", count: 1, label: "belongs_to" },
+    { source: "Tribunal Chairs", target: "Appellate Tribunals", count: 1, label: "belongs_to" },
+    { source: "Arbitrators", target: "Arbitration Centres", count: 1, label: "belongs_to" },
+    { source: "Arbitrators", target: "Tribunals", count: 1, label: "belongs_to" },
     
-    // Advocates relationships - OUTGOING (Blue)
-    { source: "Advocates", target: "Citizens / Parties", count: 1, color: "outgoing", label: "represent" },
-    { source: "Advocates", target: "Supreme Court / High Court / Subordinate Courts", count: 1, color: "outgoing", label: "argue_in" },
-    { source: "Advocates", target: "Parties in Arbitration Tribunals", count: 1, color: "outgoing", label: "may_represent" },
-    { source: "Advocates", target: "Arbitration Centres / Tribunals", count: 1, color: "incoming", label: "empanelled_by" },
-    { source: "Advocates", target: "Bar Council Rules / Court Rules / Arbitration Rules", count: 1, color: "incoming", label: "subject_to" },
-    { source: "Advocates", target: "Arbitrator (if parties agree; not mandatory)", count: 1, color: "outgoing", label: "can_be" },
-    { source: "Advocates", target: "Parties (in Arbitration, Tribunals, Empanelment)", count: 1, color: "incoming", label: "appointed_by" },
-    { source: "Advocates", target: "Bar Council / Court", count: 1, color: "incoming", label: "subject_to_discipline" },
-    { source: "Advocates", target: "Bar Council / Court", count: 1, color: "incoming", label: "accountable_to" },
+    // Administrative staff relationships
+    { source: "Administrative Staff", target: "Supreme Court", count: 1, label: "belongs_to" },
+    { source: "Administrative Staff", target: "High Courts", count: 1, label: "belongs_to" },
+    { source: "Administrative Staff", target: "Subordinate Courts", count: 1, label: "belongs_to" },
+    { source: "Administrative Staff", target: "Tribunals", count: 1, label: "belongs_to" },
+    { source: "Administrative Staff", target: "Arbitration Centres", count: 1, label: "belongs_to" },
     
-    // State Bar Councils relationships - OUTGOING (Blue)
-    { source: "State Bar Councils", target: "Advocates", count: 1, color: "outgoing", label: "admit/enrol" },
-    { source: "State Bar Councils", target: "Advocates", count: 1, color: "outgoing", label: "maintain_rolls" },
+    // Appointment authority relationships
+    { source: "Governor of State", target: "District Judges", count: 1, label: "formal_appointment_authority_for" },
+    { source: "President of India", target: "Supreme Court Judges", count: 1, label: "formal_appointment_authority_for" },
+    { source: "President of India", target: "High Court Judges", count: 1, label: "formal_appointment_authority_for" },
     
-    // Citizens relationships - OUTGOING (Blue)
-    { source: "Citizens", target: "Courts", count: 1, color: "outgoing", label: "file_cases" },
-    { source: "Citizens", target: "Courts (PIL petitioner)", count: 1, color: "outgoing", label: "initiate_PIL" },
-    { source: "Citizens", target: "Arbitrator (by party choice in arbitration)", count: 1, color: "outgoing", label: "appoint" },
-    { source: "Citizens", target: "Litigants, Petitioners (in Court, Tribunal, Arbitration)", count: 1, color: "outgoing", label: "may_become" },
-    { source: "Citizens", target: "Tribunal / Arbitration Award / Court Decision", count: 1, color: "outgoing", label: "challenge_decisions" },
-    { source: "Citizens", target: "Judiciary via PIL or Litigation", count: 1, color: "outgoing", label: "hold_accountable" },
-    { source: "Citizens", target: "Court procedures, law", count: 1, color: "incoming", label: "accountable_to" },
-    { source: "Citizens", target: "Legal Services Authorities / Bar Council Legal Aid", count: 1, color: "incoming", label: "receive_legal_aid_from" },
-    
-    // Citizens / NGOs relationships - OUTGOING (Blue)
-    { source: "Citizens / NGOs", target: "Public Interest Litigation", count: 1, color: "outgoing", label: "participate_in" },
-    
-    // Parties (inc. Citizens) relationships - OUTGOING (Blue)
-    { source: "Parties (inc. Citizens)", target: "Arbitration Centre / Arbitrator", count: 1, color: "outgoing", label: "select/arbitrate" }
+    // Committee and organizational relationships
+    { source: "Search-cum-Selection Committee", target: "Ministry of Law & Justice (DoJ)", count: 1, label: "members_of" },
+    { source: "Search-cum-Selection Committee", target: "Central Govt (Search Committee)", count: 1, label: "appointed_by" },
+    { source: "Collegium", target: "Supreme Court", count: 1, label: "members_of" },
+    { source: "Council of Ministers", target: "Central Govt (Search Committee)", count: 1, label: "head_of" },
+    { source: "PM", target: "Central Govt (Search Committee)", count: 1, label: "head_of" }
 ];
 
 // Configuration
@@ -155,7 +215,8 @@ const colorMap = {
 // Export data for use in other modules
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
-        lawsuitData,
+        judicialEntityMapData,
+        groupingData,
         config,
         colorMap
     };
@@ -164,6 +225,7 @@ if (typeof module !== 'undefined' && module.exports) {
 // Make data available globally for browser usage
 window.data = {
     judicialEntityMapData,
+    groupingData,
     config,
     colorMap
 };

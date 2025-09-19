@@ -27,15 +27,38 @@ function getFilteredTableData(judicialEntityMapData, filteredNodeId) {
 }
 
 // Create unique entities/nodes from judicial entity map data
-function createUniqueNodes(judicialEntityMapData) {
-    return [...new Set([
+function createUniqueNodes(judicialEntityMapData, groupingData) {
+    const uniqueNames = [...new Set([
         ...judicialEntityMapData.map(d => d.source),
         ...judicialEntityMapData.map(d => d.target)
-    ])].map(name => ({ id: name, name: name }));
+    ])];
+    
+    return uniqueNames.map(name => {
+        // Find the group information for this node
+        const groupInfo = groupingData.find(item => item.node === name);
+        return { 
+            id: name, 
+            name: name,
+            belongsTo: groupInfo ? groupInfo.belongsTo : "Unknown",
+            label: groupInfo ? groupInfo.label : name
+        };
+    });
 }
 
 // Create properly linked diagram data
 function createDiagramLinks(judicialEntityMapData, entities) {
+    // First, group self-loops by node to assign loop indices
+    const selfLoopCounts = {};
+    
+    // Count self-loops for each node
+    judicialEntityMapData.forEach(d => {
+        if (d.source === d.target) {
+            if (!selfLoopCounts[d.source]) {
+                selfLoopCounts[d.source] = 0;
+            }
+        }
+    });
+    
     return judicialEntityMapData.map(d => {
         const sourceNode = entities.find(node => node.id === d.source);
         const targetNode = entities.find(node => node.id === d.target);
@@ -45,13 +68,20 @@ function createDiagramLinks(judicialEntityMapData, entities) {
             return null;
         }
         
-        return {
+        const link = {
             source: sourceNode,
             target: targetNode,
             count: d.count,
-            color: d.color,
             label: d.label
         };
+        
+        // Assign loop index for self-loops
+        if (d.source === d.target) {
+            link.loopIndex = selfLoopCounts[d.source];
+            selfLoopCounts[d.source]++;
+        }
+        
+        return link;
     }).filter(link => link !== null);
 }
 
