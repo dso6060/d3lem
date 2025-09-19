@@ -1,6 +1,6 @@
 # Comprehensive Legal System - Interactive Network Diagram
 
-**Version 0.7** - A modular D3.js visualization of the Indian legal system showing relationships between Parliament, Courts, Tribunals, Arbitration Centers, and Legal Professionals.
+**Version 0.7.1** - A modular D3.js visualization of the Indian legal system showing relationships between Parliament, Courts, Tribunals, Arbitration Centers, and Legal Professionals.
 
 > **⚠️ Data-Level Clarity Needed**: This version requires further refinement of data relationships and entity categorization for improved accuracy and completeness.
 
@@ -168,6 +168,16 @@ const config = {
     // ... other settings
 };
 ```
+
+## 🔄 Version 0.7.1 Improvements
+
+### **New Features Added**
+- **Group Filtering System**: Interactive checkboxes to show/hide node groups in real-time
+- **Color-Coded Filter Labels**: Filter checkboxes use same colors as their corresponding node groups
+- **Enhanced Drag & Drop**: Fixed disappearing nodes issue with improved view restoration
+- **Improved Table View**: Updated column headers to "From Entity", "Relationship", "To Entity"
+- **Better UI/UX**: Reduced spacing, cleaner layout, and removed unnecessary elements
+- **Robust Filtering Logic**: Group filtering works seamlessly with hover and drag operations
 
 ## 🔄 Version 0.7 Improvements
 
