@@ -323,7 +323,8 @@ class LegalSystemVisualization {
     // Create a self-looping path for nodes that connect to themselves
     createSelfLoopPath(d, loopIndex = 0) {
         const nodeRadius = this.config.nodeRadius;
-        const baseLoopRadius = nodeRadius + 20; // Base loop radius
+        const outerRadius = nodeRadius + 3; // Outer colored circle radius
+        const baseLoopRadius = outerRadius + 20; // Base loop radius from outer edge
         const loopSpacing = 15; // Spacing between concentric loops
         const loopRadius = baseLoopRadius + (loopIndex * loopSpacing);
         
@@ -332,10 +333,10 @@ class LegalSystemVisualization {
         const centerY = d.source.y - loopRadius;
         
         // Create a circular path that loops back to the node
-        // Start from the right side of the node, curve up and around, then back to the left side
-        const startX = d.source.x + nodeRadius;
+        // Start from the right side of the outer circle, curve up and around, then back to the left side
+        const startX = d.source.x + outerRadius;
         const startY = d.source.y;
-        const endX = d.source.x - nodeRadius;
+        const endX = d.source.x - outerRadius;
         const endY = d.source.y;
         
         // Create a smooth arc that goes from right side, up and around, to left side
@@ -669,8 +670,20 @@ class LegalSystemVisualization {
                 const dy = d.target.y - d.source.y;
                 const dr = Math.sqrt(dx * dx + dy * dy);
                 
+                // Calculate the outer circle radius (nodeRadius + 3 for the colored circle)
+                const outerRadius = this.config.nodeRadius + 3;
+                
+                // Calculate the angle between source and target
+                const angle = Math.atan2(dy, dx);
+                
+                // Calculate the start and end points on the outer edge of the circles
+                const sourceX = d.source.x + Math.cos(angle) * outerRadius;
+                const sourceY = d.source.y + Math.sin(angle) * outerRadius;
+                const targetX = d.target.x - Math.cos(angle) * outerRadius;
+                const targetY = d.target.y - Math.sin(angle) * outerRadius;
+                
                 const sweep = dx < 0 ? 0 : 1;
-                const path = `M${d.source.x},${d.source.y}A${dr},${dr} 0 0,${sweep} ${d.target.x},${d.target.y}`;
+                const path = `M${sourceX},${sourceY}A${dr},${dr} 0 0,${sweep} ${targetX},${targetY}`;
                 return path;
             });
         
