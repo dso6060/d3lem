@@ -1,6 +1,8 @@
 # Comprehensive Legal System - Interactive Network Diagram
 
-A modular D3.js visualization of the Indian legal system showing relationships between Parliament, Courts, Tribunals, Arbitration Centers, and Legal Professionals.
+**Version 0.7** - A modular D3.js visualization of the Indian legal system showing relationships between Parliament, Courts, Tribunals, Arbitration Centers, and Legal Professionals.
+
+> **⚠️ Data-Level Clarity Needed**: This version requires further refinement of data relationships and entity categorization for improved accuracy and completeness.
 
 ## Architecture
 
@@ -53,19 +55,33 @@ d3lem/
 - Animation definitions
 - Color schemes and typography
 
-## 🎯 Key Features
+## 🎯 Key Features (Version 0.7)
 
-### **Two-Color Arrow System**
-- **Blue arrows**: Outgoing relationships (entity acts on target)
-- **Red arrows**: Incoming relationships (entity receives action)
-- Clear directional flow for easy understanding
+### **Group-Based Visualization**
+- **Group Button**: Collapse nodes into category-based group circles
+- **Hierarchical Navigation**: Explore groups at different levels of detail
+- **Node Categorization**: Six main groups (Legislative, Judiciary, Tribunals, People, Legal Framework, Non-Administrative)
+- **Concentric Group Display**: Large colored circles with group labels and node counts
+
+### **Self-Loop Arrows**
+- **Self-Referential Relationships**: Curved arrows for entities that relate to themselves
+- **Concentric Loops**: Multiple self-loops displayed as nested circles
+- **Smart Label Positioning**: Labels positioned at the top of self-loop arcs
+- **Enhanced Visual Clarity**: Clear representation of internal organizational processes
+
+### **Enhanced Arrow System**
+- **Group-Based Coloring**: Arrows colored by source node's group category
+- **Consistent Styling**: Unified arrow and arrowhead colors
+- **Improved Label Positioning**: Labels follow curved paths and avoid collisions
+- **Dynamic Repulsion**: Arrows repel each other when labels would overlap
 
 ### **Interactive Features**
 - **Drag isolation**: Only related nodes move when dragging
 - **Hover effects**: Highlight related entities and relationships
 - **Filtering system**: Focus on specific entities
 - **Toggle views**: Switch between diagram and table views
-- **Collision avoidance**: No overlapping labels
+- **Background click**: Clear all highlights and labels
+- **Collision avoidance**: Advanced label positioning and collision detection
 
 ### **Responsive Design**
 - **Desktop**: 1400x900px optimal viewing
@@ -98,29 +114,46 @@ d3lem/
 - Safari 12+
 - Edge 79+
 
-## 📊 Data Structure
+## 📊 Data Structure (Version 0.7)
 
-The legal system data includes 132 relationships across:
-- **Government entities**: Parliament, Ministry of Law & Justice
-- **Judicial system**: Supreme Court, High Courts, Subordinate Courts
-- **Specialized bodies**: Tribunals, Arbitration Centers
-- **Legal professionals**: Advocates, Bar Councils
-- **Citizens and stakeholders**: Litigants, NGOs, Parties
+The legal system data includes comprehensive relationships across:
+- **Government entities**: Parliament, Ministry of Law & Justice, State Governments
+- **Judicial system**: Supreme Court, High Courts, Subordinate Courts, Judicial Officers
+- **Specialized bodies**: Tribunals, Appellate Tribunals, Arbitration Centers
+- **Legal professionals**: Judges, Arbitrators, Tribunal Members, Administrative Staff
+- **Constitutional authorities**: President of India, Governor of State, Council of Ministers
+- **Legal framework**: Laws, Rules, Procedures, Codes (CPC, CrPC)
+
+### **Data Organization**
+- **Grouping Data**: Nodes categorized into 6 main groups with proper color coding
+- **Hierarchical Relationships**: Clear organizational structure and reporting relationships
+- **Self-Referential Links**: Internal organizational processes and rule-making
+- **Appointment Authorities**: Formal appointment and selection processes
+
+> **⚠️ Data Clarity Issues**: Some relationships may need refinement for accuracy. Entity categorization and relationship types require further validation with legal experts.
 
 ## 🎨 Customization
 
 ### **Adding New Relationships**
 Edit `data.js` to add new relationship entries to the `judicialEntityMapData` array:
 ```javascript
-{ source: "Source Entity", target: "Target Entity", count: 1, color: "outgoing", label: "relationship_type" }
+{ source: "Source Entity", target: "Target Entity", count: 1, label: "relationship_type" }
 ```
 
-### **Modifying Colors**
-Update the `colorMap` in `data.js`:
+### **Adding New Nodes**
+Add new nodes to the `groupingData` array in `data.js`:
 ```javascript
-const colorMap = {
-    "outgoing": "#your_blue_color",
-    "incoming": "#your_red_color"
+{ node: "Node Name", label: ":NodeType", belongsTo: ":GroupCategory" }
+```
+
+### **Modifying Group Colors**
+Update the `groupColors` in `network-diagram.js`:
+```javascript
+this.groupColors = {
+    ":LegislativeAndRegulatory": "#2E8B57",
+    ":JudiciaryGroup": "#4169E1",
+    ":TribunalsAndArbitrationGroup": "#FF6347",
+    // ... other groups
 };
 ```
 
@@ -135,6 +168,29 @@ const config = {
     // ... other settings
 };
 ```
+
+## 🔄 Version 0.7 Improvements
+
+### **New Features Added**
+- **Group Functionality**: Collapsible node groups with hierarchical navigation
+- **Self-Loop Arrows**: Support for self-referential relationships with concentric loops
+- **Enhanced Data**: Comprehensive judicial hierarchy and organizational relationships
+- **Improved Labeling**: Better collision detection and positioning algorithms
+- **Group-Based Coloring**: Unified color scheme based on node categories
+
+### **Known Issues & Limitations**
+- **Data Accuracy**: Some relationships may need legal expert validation
+- **Entity Categorization**: Group assignments may require refinement
+- **Relationship Types**: Standardization of relationship labels needed
+- **Performance**: Large datasets may impact rendering performance
+- **Mobile Experience**: Group functionality may need mobile optimization
+
+### **Future Enhancements Needed**
+- **Data Validation**: Legal expert review of all relationships
+- **Relationship Standardization**: Consistent naming conventions
+- **Performance Optimization**: Better handling of large datasets
+- **Accessibility**: Improved screen reader support
+- **Documentation**: More detailed relationship explanations
 
 ## 🐛 Troubleshooting
 
