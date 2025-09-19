@@ -2,7 +2,7 @@
 
 class LegalSystemVisualization {
     constructor(data, config, colorMap) {
-        this.lawsuitData = data.lawsuitData;
+        this.judicialEntityMapData = data.judicialEntityMapData;
         this.config = data.config;
         this.colorMap = data.colorMap;
         
@@ -79,19 +79,19 @@ class LegalSystemVisualization {
 
     // Prepare data for the arrow diagram
     prepareDiagramData() {
-        const companies = window.helpers.createUniqueNodes(this.lawsuitData);
-        const diagramLinks = window.helpers.createDiagramLinks(this.lawsuitData, companies);
+        const entities = window.helpers.createUniqueNodes(this.judicialEntityMapData);
+        const diagramLinks = window.helpers.createDiagramLinks(this.judicialEntityMapData, entities);
         
         // Store diagramLinks as class property for use in calculateNodeWeights
         this.diagramLinks = diagramLinks;
         
-        console.log(`Created ${diagramLinks.length} links from ${this.lawsuitData.length} data entries`);
+        console.log(`Created ${diagramLinks.length} links from ${this.judicialEntityMapData.length} data entries`);
         
-        this.simulation.nodes(companies);
+        this.simulation.nodes(entities);
         this.simulation.force("link").links(diagramLinks);
         
         this.createLinkElements(diagramLinks);
-        this.createNodeElements(companies);
+        this.createNodeElements(entities);
         this.addInteractivity();
     }
 
@@ -164,7 +164,7 @@ class LegalSystemVisualization {
         const connectedNodeIds = new Set();
         connectedNodeIds.add(d.id);
         
-        this.lawsuitData.forEach(link => {
+        this.judicialEntityMapData.forEach(link => {
             if (link.source === d.id || link.target === d.id) {
                 connectedNodeIds.add(link.source);
                 connectedNodeIds.add(link.target);
@@ -527,9 +527,9 @@ class LegalSystemVisualization {
         tableBody.selectAll("tr").remove();
         
         // Get filtered data if filter is active
-        const dataToShow = window.helpers.getFilteredTableData(this.lawsuitData, this.filteredNodeId);
+        const dataToShow = window.helpers.getFilteredTableData(this.judicialEntityMapData, this.filteredNodeId);
         
-        // Create rows for each lawsuit
+        // Create rows for each relationship
         const rows = tableBody.selectAll("tr")
             .data(dataToShow)
             .enter()
@@ -562,8 +562,8 @@ class LegalSystemVisualization {
         
         // Get unique node names
         const uniqueNodes = [...new Set([
-            ...this.lawsuitData.map(d => d.source),
-            ...this.lawsuitData.map(d => d.target)
+            ...this.judicialEntityMapData.map(d => d.source),
+            ...this.judicialEntityMapData.map(d => d.target)
         ])].sort();
         
         // Clear existing options
@@ -1160,7 +1160,7 @@ class LegalSystemVisualization {
         connectedNodeIds.add(hoveredNode.id);
         
         // Find all links connected to the hovered node
-        this.lawsuitData.forEach(link => {
+        this.judicialEntityMapData.forEach(link => {
             if (link.source === hoveredNode.id || link.target === hoveredNode.id) {
                 connectedNodeIds.add(link.source);
                 connectedNodeIds.add(link.target);

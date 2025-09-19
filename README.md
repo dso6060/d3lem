@@ -22,7 +22,7 @@ d3lem/
 ### 🏗️ Layer Separation
 
 #### **Data Layer (`data.js`)**
-- Contains all legal system relationship data
+- Contains all legal system relationship data (`judicialEntityMapData`)
 - Configuration settings (dimensions, forces, etc.)
 - Color mapping for arrow markers
 - Pure data with no logic
@@ -110,7 +110,7 @@ The legal system data includes 132 relationships across:
 ## 🎨 Customization
 
 ### **Adding New Relationships**
-Edit `data.js` to add new relationship entries:
+Edit `data.js` to add new relationship entries to the `judicialEntityMapData` array:
 ```javascript
 { source: "Source Entity", target: "Target Entity", count: 1, color: "outgoing", label: "relationship_type" }
 ```

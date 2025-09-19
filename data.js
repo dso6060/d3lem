@@ -1,7 +1,7 @@
 // Data Layer - Simple separation of data from logic
 // This file contains only the data for the legal system relationships
 
-const lawsuitData = [
+const judicialEntityMapData = [
     // Parliament relationships - OUTGOING (Blue)
     { source: "Parliament", target: "Court Procedure", count: 1, color: "outgoing", label: "enacts/amends" },
     { source: "Parliament", target: "Tribunal", count: 1, color: "outgoing", label: "establishes" },
@@ -163,7 +163,7 @@ if (typeof module !== 'undefined' && module.exports) {
 
 // Make data available globally for browser usage
 window.data = {
-    lawsuitData,
+    judicialEntityMapData,
     config,
     colorMap
 };

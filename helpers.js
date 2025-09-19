@@ -11,34 +11,34 @@
 
 /**
  * Get filtered table data based on current node filter
- * @param {Array} lawsuitData - Array of relationship data
+ * @param {Array} judicialEntityMapData - Array of relationship data
  * @param {string|null} filteredNodeId - ID of the node to filter by
  * @returns {Array} Filtered relationship data
  */
-function getFilteredTableData(lawsuitData, filteredNodeId) {
+function getFilteredTableData(judicialEntityMapData, filteredNodeId) {
     if (!filteredNodeId) {
-        return lawsuitData;
+        return judicialEntityMapData;
     }
     
     // Return only relationships involving the filtered node
-    return lawsuitData.filter(link => 
+    return judicialEntityMapData.filter(link => 
         link.source === filteredNodeId || link.target === filteredNodeId
     );
 }
 
-// Create unique companies/nodes from lawsuit data
-function createUniqueNodes(lawsuitData) {
+// Create unique entities/nodes from judicial entity map data
+function createUniqueNodes(judicialEntityMapData) {
     return [...new Set([
-        ...lawsuitData.map(d => d.source),
-        ...lawsuitData.map(d => d.target)
+        ...judicialEntityMapData.map(d => d.source),
+        ...judicialEntityMapData.map(d => d.target)
     ])].map(name => ({ id: name, name: name }));
 }
 
 // Create properly linked diagram data
-function createDiagramLinks(lawsuitData, companies) {
-    return lawsuitData.map(d => {
-        const sourceNode = companies.find(node => node.id === d.source);
-        const targetNode = companies.find(node => node.id === d.target);
+function createDiagramLinks(judicialEntityMapData, entities) {
+    return judicialEntityMapData.map(d => {
+        const sourceNode = entities.find(node => node.id === d.source);
+        const targetNode = entities.find(node => node.id === d.target);
         
         if (!sourceNode || !targetNode) {
             console.warn(`Missing node for link: ${d.source} -> ${d.target}`);

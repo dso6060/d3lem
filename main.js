@@ -16,16 +16,16 @@ let isInitialized = false;
 function init() {
     try {
         // Get data from window.data at runtime
-        const { lawsuitData, config, colorMap } = window.data || {};
+        const { judicialEntityMapData, config, colorMap } = window.data || {};
         
         // Validate required data is available
-        if (!lawsuitData || !config || !colorMap) {
+        if (!judicialEntityMapData || !config || !colorMap) {
             throw new Error('Required data not loaded. Make sure data.js is included.');
         }
 
         // Create visualization instance
         visualization = new LegalSystemVisualization({
-            lawsuitData,
+            judicialEntityMapData,
             config,
             colorMap
         });
