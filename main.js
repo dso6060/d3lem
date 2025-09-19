@@ -1,28 +1,68 @@
-// Main Application - Entry point and orchestration
+/**
+ * Main Application - Entry point and orchestration
+ * 
+ * This file serves as the main entry point for the Legal System Network Diagram application.
+ * It coordinates between the data layer, helper functions, and visualization components.
+ */
 
-// Import utilities - will be available after utils.js loads
-
-// Global variables
+// Global application state
 let visualization = null;
+let isInitialized = false;
 
-// Initialize the application
+/**
+ * Initialize the application
+ * Sets up the visualization with data and configuration
+ */
 function init() {
-    // Get data from window.data at runtime
-    const { lawsuitData, config, colorMap } = window.data || {};
-    
-    // Check if required data is available
-    if (!lawsuitData || !config || !colorMap) {
-        console.error('Required data not loaded. Make sure data-simple.js is included.');
-        return;
+    try {
+        // Get data from window.data at runtime
+        const { lawsuitData, config, colorMap } = window.data || {};
+        
+        // Validate required data is available
+        if (!lawsuitData || !config || !colorMap) {
+            throw new Error('Required data not loaded. Make sure data.js is included.');
+        }
+
+        // Create visualization instance
+        visualization = new LegalSystemVisualization({
+            lawsuitData,
+            config,
+            colorMap
+        });
+
+        // Initialize the visualization
+        visualization.init();
+        
+        // Mark as initialized
+        isInitialized = true;
+        
+        console.log('Legal System Network Diagram initialized successfully');
+        
+    } catch (error) {
+        console.error('Failed to initialize application:', error);
+        showErrorMessage('Failed to load the visualization. Please refresh the page.');
     }
+}
 
-    // Create visualization instance
-    visualization = new LegalSystemVisualization(
-        { lawsuitData, config, colorMap }
-    );
-
-    // Initialize the visualization
-    visualization.init();
+/**
+ * Show error message to user
+ * @param {string} message - Error message to display
+ */
+function showErrorMessage(message) {
+    const container = document.querySelector('.visualization-container');
+    if (container) {
+        container.innerHTML = `
+            <div style="display: flex; align-items: center; justify-content: center; height: 100%; color: #d32f2f; font-size: 18px; text-align: center;">
+                <div>
+                    <h3>Error Loading Visualization</h3>
+                    <p>${message}</p>
+                    <button onclick="location.reload()" style="margin-top: 20px; padding: 10px 20px; background: #1976d2; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                        Reload Page
+                    </button>
+                </div>
+            </div>
+        `;
+    }
 }
 
 // Setup the data table
@@ -215,7 +255,34 @@ document.addEventListener('DOMContentLoaded', function() {
     init();
 });
 
-// Make functions available globally for HTML event handlers
-window.toggleView = toggleView;
-window.handleNodeFilter = handleNodeFilter;
-window.clearNodeFilter = clearNodeFilter;
+/**
+ * Global event handlers for HTML interactions
+ * These functions are exposed to the global scope for use in HTML event handlers
+ */
+
+// Toggle between diagram and table views
+window.toggleView = () => {
+    if (!isInitialized || !visualization) {
+        console.warn('Visualization not initialized yet');
+        return;
+    }
+    visualization.toggleView();
+};
+
+// Handle node filter selection from dropdown
+window.handleNodeFilter = (event) => {
+    if (!isInitialized || !visualization) {
+        console.warn('Visualization not initialized yet');
+        return;
+    }
+    visualization.handleNodeFilter(event);
+};
+
+// Clear the current node filter
+window.clearNodeFilter = () => {
+    if (!isInitialized || !visualization) {
+        console.warn('Visualization not initialized yet');
+        return;
+    }
+    visualization.clearNodeFilter();
+};

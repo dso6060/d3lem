@@ -79,8 +79,8 @@ class LegalSystemVisualization {
 
     // Prepare data for the arrow diagram
     prepareDiagramData() {
-        const companies = window.utils.createUniqueNodes(this.lawsuitData);
-        const diagramLinks = window.utils.createDiagramLinks(this.lawsuitData, companies);
+        const companies = window.helpers.createUniqueNodes(this.lawsuitData);
+        const diagramLinks = window.helpers.createDiagramLinks(this.lawsuitData, companies);
         
         // Store diagramLinks as class property for use in calculateNodeWeights
         this.diagramLinks = diagramLinks;
@@ -527,7 +527,7 @@ class LegalSystemVisualization {
         tableBody.selectAll("tr").remove();
         
         // Get filtered data if filter is active
-        const dataToShow = window.utils.getFilteredTableData(this.lawsuitData, this.filteredNodeId);
+        const dataToShow = window.helpers.getFilteredTableData(this.lawsuitData, this.filteredNodeId);
         
         // Create rows for each lawsuit
         const rows = tableBody.selectAll("tr")
@@ -1327,7 +1327,7 @@ class LegalSystemVisualization {
             labelX = Math.max(labelMargin, Math.min(this.config.width - labelMargin, labelX));
             labelY = Math.max(labelMargin, Math.min(this.config.height - labelMargin, labelY));
             
-            const collisionScore = window.utils.calculateCollisionScore(labelX, labelY, d.label, this.svg, this.nodeElements);
+            const collisionScore = window.helpers.calculateCollisionScore(labelX, labelY, d.label, this.svg, this.nodeElements);
             if (collisionScore < minCollisionScore) {
                 minCollisionScore = collisionScore;
                 bestPosition = { x: labelX, y: labelY };

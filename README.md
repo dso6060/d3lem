@@ -13,9 +13,9 @@ d3lem/
 ├── index.html          # Main HTML structure
 ├── style.css           # All styling and CSS
 ├── data.js             # Data layer - all data and configuration
-├── utils.js            # Utility functions and helpers
-├── visualization.js    # Logic layer - D3.js visualization logic
-├── app.js              # Application layer - orchestration and entry point
+├── helpers.js          # Helper functions and utilities
+├── network-diagram.js  # Logic layer - D3.js visualization logic
+├── main.js             # Application layer - orchestration and entry point
 └── README.md           # This documentation
 ```
 
@@ -27,20 +27,20 @@ d3lem/
 - Color mapping for arrow markers
 - Pure data with no logic
 
-#### **Logic Layer (`visualization.js`)**
+#### **Logic Layer (`network-diagram.js`)**
 - Core D3.js visualization functionality
 - Force simulation management
 - Node and link creation/updates
 - Drag and interaction behaviors
 - Encapsulated in `LegalSystemVisualization` class
 
-#### **Utility Layer (`utils.js`)**
+#### **Helper Layer (`helpers.js`)**
 - Helper functions for data processing
 - Label positioning algorithms
 - Collision detection utilities
 - Reusable functions across the application
 
-#### **Application Layer (`app.js`)**
+#### **Application Layer (`main.js`)**
 - Main entry point and orchestration
 - Event handling and user interactions
 - View switching logic

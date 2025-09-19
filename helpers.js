@@ -1,6 +1,20 @@
-// Utility Functions - Helper functions for the legal system visualization
+/**
+ * Helper Functions for Legal System Network Diagram
+ * 
+ * This file contains utility functions for data processing, label positioning,
+ * collision detection, and other helper operations used throughout the application.
+ */
 
-// Get filtered table data based on current filter
+/**
+ * Data Processing Utilities
+ */
+
+/**
+ * Get filtered table data based on current node filter
+ * @param {Array} lawsuitData - Array of relationship data
+ * @param {string|null} filteredNodeId - ID of the node to filter by
+ * @returns {Array} Filtered relationship data
+ */
 function getFilteredTableData(lawsuitData, filteredNodeId) {
     if (!filteredNodeId) {
         return lawsuitData;
@@ -142,8 +156,8 @@ if (typeof module !== 'undefined' && module.exports) {
     };
 }
 
-// Make utilities available globally for browser usage
-window.utils = {
+// Make helper functions available globally for browser usage
+window.helpers = {
     getFilteredTableData,
     createUniqueNodes,
     createDiagramLinks,
