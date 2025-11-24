@@ -1383,7 +1383,7 @@ const colorMap = {
 
 // Access control configuration
 const accessControlConfig = {
-    password: "d3lem_2025",  // Password/PIN for edit access (empty string to disable, set to enable)
+    // Password intentionally omitted before pushing to remote. Set locally to enable edit mode.
     ipWhitelist: [],  // Array of allowed IP addresses (for future use)
     enableIPCheck: false  // Boolean flag to enable IP checking (false for now)
 };
