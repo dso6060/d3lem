@@ -1,31 +1,96 @@
-* {
+/* Scoped styles for D3LEM app - compatible with friedso.com/apps/ */
+/* All styles are scoped to .d3lem-app to prevent conflicts with parent site */
+
+/* Landscape orientation lock - show warning in portrait mode */
+@media screen and (orientation: portrait) {
+    .d3lem-app::before {
+        content: '';
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.95);
+        z-index: 99999;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .d3lem-app::after {
+        content: 'Please rotate your device to landscape mode to view this visualization';
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        color: #fff;
+        font-size: 24px;
+        text-align: center;
+        padding: 30px;
+        background: #1976d2;
+        border-radius: 8px;
+        z-index: 100000;
+        max-width: 90%;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+        font-weight: 500;
+    }
+}
+
+.d3lem-app {
+    /* Reset and isolate from parent site styles */
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
+    background: #fff !important;
+    color: #333 !important;
+    line-height: 1.4 !important;
+    box-sizing: border-box;
+    display: block;
+    /* Reset common inherited properties */
     margin: 0;
     padding: 0;
+    border: none;
+    text-decoration: none;
+    list-style: none;
+    /* Prevent zoom on double tap */
+    touch-action: manipulation;
+}
+
+.d3lem-app *,
+.d3lem-app *::before,
+.d3lem-app *::after {
     box-sizing: border-box;
 }
 
-body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-    background: #fff;
-    color: #333;
-    line-height: 1.4;
-}
-
-.container {
+.d3lem-app .container {
     max-width: 1400px;
     margin: 0 auto;
     padding: 20px;
+    width: 100%;
+    box-sizing: border-box;
 }
 
-h1 {
+.d3lem-app h1 {
     text-align: center;
     font-size: 24px;
     font-weight: 300;
-    margin-bottom: 10px;
+    margin-bottom: 5px;
+    margin-top: 0;
     color: #333;
 }
 
-.description {
+.d3lem-app .subtitle {
+    text-align: center;
+    font-size: 18px;
+    font-weight: 400;
+    margin-top: 0;
+    margin-bottom: 10px;
+    color: #666;
+    font-family: 'Courier New', monospace;
+    letter-spacing: 2px;
+    display: block;
+    width: 100%;
+}
+
+.d3lem-app .description {
     text-align: center;
     font-size: 14px;
     color: #666;
@@ -33,17 +98,47 @@ h1 {
     font-style: italic;
 }
 
-.legend {
+.d3lem-app .legend-container {
+    position: absolute;
+    top: 900px;
+    left: 0;
+    right: 0;
+    padding: 12px 20px;
+    background: rgba(248, 249, 250, 0.95);
+    border-top: 1px solid #ddd;
+    border-bottom: 1px solid #ddd;
+    transition: top 0.3s ease, opacity 0.5s ease;
+    z-index: 10;
+}
+
+/* Move legend down when project note is collapsed */
+.d3lem-app #diagram-view.project-note-collapsed .legend-container {
+    top: auto;
+    bottom: 50px;
+}
+
+.d3lem-app .legend {
     display: flex;
     justify-content: center;
     gap: 30px;
-    margin-bottom: 20px;
-    padding: 10px;
-    background: #f8f9fa;
-    border-radius: 5px;
+    flex-wrap: wrap;
 }
 
-.legend-item {
+.d3lem-app .legend-note {
+    text-align: center;
+    font-size: 11px;
+    color: #666;
+    margin-top: 5px;
+    font-style: italic;
+}
+
+/* Hide legend when table view is active */
+.d3lem-app #diagram-view:not(.active) .legend-container,
+.d3lem-app .container.table-view-active .legend-container {
+    display: none;
+}
+
+.d3lem-app .legend-item {
     display: flex;
     align-items: center;
     gap: 8px;
@@ -51,26 +146,18 @@ h1 {
     font-weight: 500;
 }
 
-.legend-color {
+.d3lem-app .legend-color {
     width: 20px;
     height: 3px;
     border-radius: 2px;
 }
 
-.legend-color.outgoing {
-    background-color: #1f77b4;
-}
-
-.legend-color.incoming {
-    background-color: #d62728;
-}
-
-.controls {
+.d3lem-app .controls {
     text-align: center;
     margin-bottom: 20px;
 }
 
-.filter-controls {
+.d3lem-app .filter-controls {
     margin-top: 15px;
     display: flex;
     align-items: center;
@@ -79,12 +166,12 @@ h1 {
     flex-wrap: wrap;
 }
 
-.filter-controls label {
+.d3lem-app .filter-controls label {
     font-weight: 500;
     color: #333;
 }
 
-.filter-controls select {
+.d3lem-app .filter-controls select {
     padding: 6px 12px;
     border: 1px solid #ddd;
     border-radius: 3px;
@@ -93,13 +180,13 @@ h1 {
     min-width: 200px;
 }
 
-.filter-controls select:focus {
+.d3lem-app .filter-controls select:focus {
     outline: none;
     border-color: #1f77b4;
     box-shadow: 0 0 0 2px rgba(31, 119, 180, 0.2);
 }
 
-button {
+.d3lem-app button {
     background: #1f77b4;
     color: white;
     border: none;
@@ -110,30 +197,39 @@ button {
     font-size: 14px;
     font-weight: 400;
     transition: background-color 0.2s ease;
+    font-family: inherit;
 }
 
-button:hover {
+.d3lem-app button:hover {
     background: #0f5a8a;
 }
 
-button:active {
+.d3lem-app button:active {
     background: #0a4a73;
 }
 
-button:disabled {
+.d3lem-app button:disabled {
     opacity: 0.5;
     cursor: not-allowed;
 }
 
-.visualization-container {
+.d3lem-app .visualization-container {
     position: relative;
-    min-height: 700px;
-    height: 900px;
+    min-height: 900px;
     border: 1px solid #ddd;
     background: #fff;
+    padding-bottom: 0;
+    width: 100%;
+    box-sizing: border-box;
+    overflow: hidden;
 }
 
-.view {
+/* Allow scrolling when table view is active */
+.d3lem-app .container.table-view-active .visualization-container {
+    overflow: visible;
+}
+
+.d3lem-app .view {
     position: absolute;
     top: 0;
     left: 0;
@@ -144,13 +240,93 @@ button:disabled {
     pointer-events: none;
 }
 
-.view.active {
+.d3lem-app .view.active {
     opacity: 1;
     pointer-events: all;
 }
 
+/* Enable scrolling for table view */
+.d3lem-app #table-view {
+    overflow-y: auto;
+    overflow-x: auto;
+    padding: 20px;
+    padding-bottom: 80px; /* Extra padding at bottom to account for project note */
+}
+
+/* Project note styling - positioned at bottom of visualization container (visible in both views) */
+.d3lem-app .project-note {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    max-width: 100%;
+    background: rgba(248, 249, 250, 0.98);
+    border-top: 2px solid #1976d2;
+    box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+    z-index: 10;
+}
+
+.d3lem-app .project-note-toggle {
+    width: 100%;
+    padding: 12px 20px;
+    background: transparent;
+    border: none;
+    text-align: left;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    color: #333;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: background-color 0.2s ease;
+    font-family: inherit;
+}
+
+.d3lem-app .project-note-toggle:hover {
+    background: rgba(25, 118, 210, 0.05);
+}
+
+.d3lem-app .toggle-icon {
+    display: inline-block;
+    transition: transform 0.3s ease;
+    font-size: 10px;
+    color: #1976d2;
+}
+
+.d3lem-app .project-note-toggle[aria-expanded="true"] .toggle-icon {
+    transform: rotate(90deg);
+}
+
+.d3lem-app .project-note-content {
+    max-height: 300px;
+    overflow-y: auto;
+    padding: 0 20px 15px 20px;
+    font-size: 12px;
+    line-height: 1.6;
+    color: #333;
+    transition: max-height 0.3s ease, padding 0.3s ease;
+}
+
+.d3lem-app .project-note-content.collapsed {
+    max-height: 0;
+    padding: 0 20px;
+    overflow: hidden;
+}
+
+.d3lem-app .project-note-content p {
+    margin: 0 0 10px 0;
+}
+
+.d3lem-app .project-note-content p:last-child {
+    margin-bottom: 0;
+}
+
+/* Project note is always visible in visualization container */
+
 /* Table Styles */
-#data-table {
+.d3lem-app #data-table {
     width: 100%;
     border-collapse: collapse;
     background: white;
@@ -158,7 +334,7 @@ button:disabled {
     font-size: 14px;
 }
 
-#data-table th {
+.d3lem-app #data-table th {
     background: #f5f5f5;
     color: #333;
     padding: 8px 12px;
@@ -167,38 +343,343 @@ button:disabled {
     border-bottom: 1px solid #ddd;
 }
 
-#data-table td {
+.d3lem-app #data-table td {
     padding: 8px 12px;
     border-bottom: 1px solid #eee;
     font-size: 14px;
 }
 
-#data-table tbody tr:hover {
+.d3lem-app #data-table tbody tr:hover {
     background: #f9f9f9;
 }
 
-#data-table tbody tr {
+.d3lem-app #data-table tbody tr {
     transition: background-color 0.2s ease;
 }
 
-/* SVG Styles */
-#arrow-diagram {
+/* Edit Mode Styles */
+.d3lem-app #data-table.edit-mode tbody tr:hover {
+    background: #f0f0f0;
+}
+
+.d3lem-app .editable-cell {
+    position: relative;
+}
+
+.d3lem-app .cell-input {
+    width: 100%;
+    padding: 4px 8px;
+    border: 1px solid #ddd;
+    border-radius: 3px;
+    font-size: 14px;
+    font-family: inherit;
+    background: #fff;
+    transition: border-color 0.2s ease;
+}
+
+.d3lem-app .cell-input:hover {
+    border-color: #999;
+}
+
+.d3lem-app .cell-input:focus {
+    outline: none;
+    border-color: #1976d2;
+    box-shadow: 0 0 0 2px rgba(25, 118, 210, 0.1);
+}
+
+.d3lem-app .action-buttons {
+    white-space: nowrap;
+}
+
+.d3lem-app .btn-edit-row,
+.d3lem-app .btn-delete-row {
+    padding: 4px 12px;
+    margin: 0 2px;
+    border: 1px solid #ddd;
+    border-radius: 3px;
+    background: #fff;
+    color: #333;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: inherit;
+}
+
+.d3lem-app .btn-edit-row:hover {
+    background: #1976d2;
+    color: #fff;
+    border-color: #1976d2;
+}
+
+.d3lem-app .btn-delete-row:hover {
+    background: #d32f2f;
+    color: #fff;
+    border-color: #d32f2f;
+}
+
+.d3lem-app #table-controls {
+    margin-bottom: 10px;
+}
+
+.d3lem-app #addRowBtn {
+    padding: 8px 16px;
+    background: #1976d2;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background 0.2s ease;
+    font-family: inherit;
+}
+
+.d3lem-app #addRowBtn:hover {
+    background: #1565c0;
+}
+
+/* Modal Styles */
+.d3lem-app .modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+}
+
+.d3lem-app .modal-content {
+    background: #fff;
+    border-radius: 8px;
+    padding: 24px;
+    max-width: 500px;
+    width: 90%;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.d3lem-app .modal-content h3 {
+    margin: 0 0 20px 0;
+    font-size: 20px;
+    color: #333;
+}
+
+.d3lem-app .password-modal {
+    max-width: 400px;
+}
+
+.d3lem-app .edit-modal {
+    max-width: 600px;
+}
+
+.d3lem-app .modal-form {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.d3lem-app .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.d3lem-app .form-group label {
+    font-weight: 600;
+    color: #333;
+    font-size: 14px;
+}
+
+.d3lem-app .form-group input,
+.d3lem-app .form-group select {
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+    font-family: inherit;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.d3lem-app .form-group input:focus,
+.d3lem-app .form-group select:focus {
+    outline: none;
+    border-color: #1976d2;
+    box-shadow: 0 0 0 2px rgba(25, 118, 210, 0.1);
+}
+
+.d3lem-app .modal-buttons {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+    margin-top: 20px;
+}
+
+.d3lem-app .modal-buttons button {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 4px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background 0.2s ease;
+    font-family: inherit;
+}
+
+.d3lem-app .modal-buttons button[type="submit"],
+.d3lem-app #password-submit,
+.d3lem-app #edit-save {
+    background: #1976d2;
+    color: #fff;
+}
+
+.d3lem-app .modal-buttons button[type="submit"]:hover,
+.d3lem-app #password-submit:hover,
+.d3lem-app #edit-save:hover {
+    background: #1565c0;
+}
+
+.d3lem-app .modal-buttons button[type="button"],
+.d3lem-app #password-cancel,
+.d3lem-app #edit-cancel {
+    background: #f5f5f5;
+    color: #333;
+}
+
+.d3lem-app .modal-buttons button[type="button"]:hover,
+.d3lem-app #password-cancel:hover,
+.d3lem-app #edit-cancel:hover {
+    background: #e0e0e0;
+}
+
+.d3lem-app .error-message {
+    color: #d32f2f;
+    font-size: 13px;
+    margin-top: 8px;
+}
+
+.d3lem-app #password-input {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+    box-sizing: border-box;
+    font-family: inherit;
+}
+
+.d3lem-app #password-input:focus {
+    outline: none;
+    border-color: #1976d2;
+    box-shadow: 0 0 0 2px rgba(25, 118, 210, 0.1);
+}
+
+/* Download Button Styles */
+.d3lem-app #table-download-controls {
+    margin-bottom: 10px;
+    padding: 10px 0;
+}
+
+.d3lem-app #downloadExcelBtn {
+    padding: 8px 16px;
+    background: #2E7D32;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    transition: background 0.2s ease;
+    font-family: inherit;
+}
+
+.d3lem-app #downloadExcelBtn:hover {
+    background: #1B5E20;
+}
+
+.d3lem-app #downloadExcelBtn:active {
+    background: #155724;
+}
+
+/* Share/Embed Button Styles */
+.d3lem-app #shareEmbedBtn {
+    padding: 8px 16px;
+    background: #7B1FA2;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    transition: background 0.2s ease;
+    font-family: inherit;
+}
+
+.d3lem-app #shareEmbedBtn:hover {
+    background: #6A1B9A;
+}
+
+.d3lem-app #shareEmbedBtn:active {
+    background: #4A148C;
+}
+
+/* Share/Embed Modal Styles */
+.d3lem-app .share-modal {
+    max-width: 800px;
+}
+
+.d3lem-app .share-modal textarea {
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+.d3lem-app #copy-embed-code {
+    padding: 8px 16px;
+    background: #1976d2;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background 0.2s ease;
+    font-family: inherit;
+}
+
+.d3lem-app #copy-embed-code:hover {
+    background: #1565c0;
+}
+
+.d3lem-app #copy-success {
+    font-weight: 500;
+    font-size: 14px;
+}
+
+/* SVG Styles - Responsive */
+.d3lem-app #arrow-diagram {
     width: 100%;
     height: 100%;
     background: white;
+    display: block;
+    /* Ensure SVG scales properly */
+    max-width: 100%;
+    max-height: 100%;
 }
 
 /* Node styles */
-.node {
+.d3lem-app .node {
     cursor: pointer;
 }
 
-.node-circle {
+.d3lem-app .node-circle {
     fill: #000;
     stroke: none;
 }
 
-.node-text {
+.d3lem-app .node-text {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     font-size: 11px;
     font-weight: 400;
@@ -209,30 +690,30 @@ button:disabled {
 }
 
 /* Link styles - Simplified to 2 colors for directionality */
-.link {
+.d3lem-app .link {
     fill: none;
     stroke-width: 2px;
 }
 
-.link.outgoing {
+.d3lem-app .link.outgoing {
     stroke: #1f77b4;  /* Blue for outgoing relationships */
 }
 
-.link.incoming {
+.d3lem-app .link.incoming {
     stroke: #d62728;  /* Red for incoming relationships */
 }
 
 /* Arrow marker */
-.arrow-marker {
+.d3lem-app .arrow-marker {
     fill: #999;
 }
 
 /* Relationship label styles */
-.relationship-label-group {
+.d3lem-app .relationship-label-group {
     pointer-events: none;
 }
 
-.relationship-label-group rect {
+.d3lem-app .relationship-label-group rect {
     fill: rgba(255, 255, 255, 0.95);
     stroke: #333;
     stroke-width: 2;
@@ -240,7 +721,7 @@ button:disabled {
     filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
 }
 
-.relationship-label-group text {
+.d3lem-app .relationship-label-group text {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     font-size: 12px;
     font-weight: bold;
@@ -251,11 +732,11 @@ button:disabled {
 }
 
 /* Animation classes */
-.fade-in {
+.d3lem-app .fade-in {
     animation: fadeIn 0.5s ease-in-out;
 }
 
-.fade-out {
+.d3lem-app .fade-out {
     animation: fadeOut 0.5s ease-in-out;
 }
 
@@ -278,43 +759,246 @@ button:disabled {
 }
 
 /* Responsive design */
-@media (max-width: 1200px) {
-    .container {
-        max-width: 1000px;
+@media (max-width: 1400px) {
+    .d3lem-app .container {
+        max-width: 100%;
         padding: 15px;
     }
     
-    .visualization-container {
-        height: 700px;
+    .d3lem-app .visualization-container {
+        min-height: 800px;
+    }
+}
+
+@media (max-width: 1024px) {
+    .d3lem-app .container {
+        padding: 12px;
+    }
+    
+    .d3lem-app h1 {
+        font-size: 22px;
+    }
+    
+    .d3lem-app .subtitle {
+        font-size: 16px;
+    }
+    
+    .d3lem-app .description {
+        font-size: 13px;
+    }
+    
+    .d3lem-app .visualization-container {
+        min-height: 700px;
+    }
+    
+    .d3lem-app .legend {
+        gap: 20px;
+    }
+    
+    .d3lem-app .legend-item {
+        font-size: 12px;
     }
 }
 
 @media (max-width: 768px) {
-    .container {
-        max-width: 100%;
+    .d3lem-app .container {
         padding: 10px;
     }
     
-    h1 {
-        font-size: 20px;
+    .d3lem-app h1 {
+        font-size: 18px;
+        margin-bottom: 3px;
     }
     
-    .visualization-container {
-        min-height: 500px;
-        height: 600px;
+    .d3lem-app .subtitle {
+        font-size: 14px;
+        margin-bottom: 8px;
     }
     
-    #data-table {
+    .d3lem-app .description {
         font-size: 12px;
+        margin-bottom: 12px;
     }
     
-    #data-table th,
-    #data-table td {
+    .d3lem-app .visualization-container {
+        min-height: 500px;
+    }
+    
+    .d3lem-app .controls {
+        margin-bottom: 15px;
+    }
+    
+    .d3lem-app .filter-controls {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 8px;
+    }
+    
+    .d3lem-app .filter-controls label {
+        font-size: 13px;
+    }
+    
+    .d3lem-app .filter-controls select {
+        width: 100%;
+        min-width: auto;
+        font-size: 13px;
+        padding: 8px;
+    }
+    
+    .d3lem-app button {
+        padding: 8px 14px;
+        font-size: 13px;
+        margin: 3px;
+    }
+    
+    .d3lem-app .legend {
+        gap: 15px;
+        flex-wrap: wrap;
+    }
+    
+    .d3lem-app .legend-item {
+        font-size: 11px;
+    }
+    
+    .d3lem-app .legend-color {
+        width: 18px;
+        height: 2px;
+    }
+    
+    .d3lem-app .legend-note {
+        font-size: 10px;
+    }
+    
+    .d3lem-app #data-table {
+        font-size: 11px;
+        display: block;
+        overflow-x: auto;
+        white-space: nowrap;
+    }
+    
+    .d3lem-app #data-table th,
+    .d3lem-app #data-table td {
         padding: 6px 8px;
     }
     
-    button {
+    .d3lem-app .project-note-toggle {
+        font-size: 12px;
+        padding: 10px 15px;
+    }
+    
+    .d3lem-app .project-note-content {
+        font-size: 11px;
+        padding: 0 15px 12px 15px;
+    }
+    
+    .d3lem-app .modal-content {
+        width: 95%;
+        padding: 20px;
+        max-height: 95vh;
+    }
+    
+    .d3lem-app .modal-content h3 {
+        font-size: 18px;
+    }
+}
+
+@media (max-width: 480px) {
+    .d3lem-app .container {
+        padding: 8px;
+    }
+    
+    .d3lem-app h1 {
+        font-size: 16px;
+    }
+    
+    .d3lem-app .subtitle {
+        font-size: 12px;
+    }
+    
+    .d3lem-app .description {
+        font-size: 11px;
+    }
+    
+    .d3lem-app .visualization-container {
+        min-height: 400px;
+    }
+    
+    .d3lem-app button {
         padding: 6px 12px;
         font-size: 12px;
+        margin: 2px;
+        width: auto;
+        display: inline-block;
+    }
+    
+    .d3lem-app .controls {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        align-items: stretch;
+    }
+    
+    .d3lem-app .controls > button {
+        width: 100%;
+        margin: 0;
+    }
+    
+    .d3lem-app .legend {
+        gap: 10px;
+    }
+    
+    .d3lem-app .legend-item {
+        font-size: 10px;
+    }
+    
+    .d3lem-app #data-table {
+        font-size: 10px;
+    }
+    
+    .d3lem-app #data-table th,
+    .d3lem-app #data-table td {
+        padding: 4px 6px;
+    }
+    
+    .d3lem-app .node-text {
+        font-size: 9px !important;
+    }
+    
+    .d3lem-app .relationship-label-group text {
+        font-size: 10px !important;
+    }
+}
+
+/* Landscape-specific optimizations */
+@media screen and (orientation: landscape) and (max-height: 600px) {
+    .d3lem-app .container {
+        padding: 8px;
+    }
+    
+    .d3lem-app h1 {
+        font-size: 16px;
+        margin-bottom: 2px;
+    }
+    
+    .d3lem-app .subtitle {
+        font-size: 12px;
+        margin-bottom: 5px;
+    }
+    
+    .d3lem-app .description {
+        font-size: 11px;
+        margin-bottom: 8px;
+    }
+    
+    .d3lem-app .visualization-container {
+        min-height: 450px;
+    }
+    
+    .d3lem-app .legend-container {
+        padding: 8px 15px;
+    }
+    
+    .d3lem-app .legend-item {
+        font-size: 10px;
     }
 }

@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="screen-orientation" content="landscape">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Legal System Visualization - Embed Example</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background: #f5f5f5;
+        }
+        .example-container {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .example-container h2 {
+            margin-top: 0;
+            color: #333;
+        }
+        .embed-container {
+            width: 100%;
+            height: 700px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin: 20px 0;
+        }
+        code {
+            background: #f4f4f4;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+        }
+        pre {
+            background: #f4f4f4;
+            padding: 15px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+    </style>
+    <!-- Include D3.js -->
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <!-- Include CSS -->
+    <link rel="stylesheet" href="style.css">
+    <!-- Include required scripts -->
+    <script src="data.js"></script>
+    <script src="helpers.js"></script>
+    <script src="network-diagram.js"></script>
+</head>
+<body>
+    <h1>Legal System Visualization - Embed Examples</h1>
+    
+    <div class="example-container">
+        <h2>Example 1: Basic Embed (Diagram View)</h2>
+        <p>This example shows a basic embed with default settings (diagram view, filters enabled, read-only mode).</p>
+        <div id="embed-example-1" class="embed-container"></div>
+        <h3>Code:</h3>
+        <pre><code>&lt;div id="my-viz" style="width: 100%; height: 700px;"&gt;&lt;/div&gt;
+&lt;script src="data.js"&gt;&lt;/script&gt;
+&lt;script src="helpers.js"&gt;&lt;/script&gt;
+&lt;script src="network-diagram.js"&gt;&lt;/script&gt;
+&lt;script src="embed.js"&gt;&lt;/script&gt;
+&lt;script&gt;
+  LegalSystemEmbed.init({
+    container: '#my-viz',
+    view: 'diagram',
+    showFilters: true
+  });
+&lt;/script&gt;</code></pre>
+    </div>
+
+    <div class="example-container">
+        <h2>Example 2: Table View with Filters</h2>
+        <p>This example shows the table view with filters enabled.</p>
+        <div id="embed-example-2" class="embed-container"></div>
+        <h3>Code:</h3>
+        <pre><code>LegalSystemEmbed.init({
+  container: '#my-viz',
+  view: 'table',
+  showFilters: true
+});</code></pre>
+    </div>
+
+    <div class="example-container">
+        <h2>Example 3: Diagram View without Filters</h2>
+        <p>This example shows the diagram view without filter controls.</p>
+        <div id="embed-example-3" class="embed-container"></div>
+        <h3>Code:</h3>
+        <pre><code>LegalSystemEmbed.init({
+  container: '#my-viz',
+  view: 'diagram',
+  showFilters: false
+});</code></pre>
+    </div>
+
+    <script src="embed.js"></script>
+    <script>
+        // Initialize Example 1: Basic embed
+        LegalSystemEmbed.init({
+            container: '#embed-example-1',
+            view: 'diagram',
+            showFilters: true
+        });
+
+        // Initialize Example 2: Table view
+        LegalSystemEmbed.init({
+            container: '#embed-example-2',
+            view: 'table',
+            showFilters: true
+        });
+
+        // Initialize Example 3: No filters
+        LegalSystemEmbed.init({
+            container: '#embed-example-3',
+            view: 'diagram',
+            showFilters: false
+        });
+    </script>
+</body>
+</html>
+

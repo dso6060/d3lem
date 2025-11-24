@@ -2,34 +2,45 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Comprehensive Legal System - Interactive Network Diagram</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="screen-orientation" content="landscape">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>D3 rendered Legal Entity Map</title>
     <link rel="stylesheet" href="style.css">
     <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
 </head>
 <body>
-    <div class="container">
-        <h1>Comprehensive Legal System - Interactive Network Diagram</h1>
+    <div class="d3lem-app">
+        <div class="container">
+        <h1>D3 rendered Legal Entity Map</h1>
+        <p class="subtitle">d3lem</p>
         <p class="description">Explore the complex relationships between Parliament, Courts, Tribunals, Arbitration Centers, and Legal Professionals in the Indian legal ecosystem.</p>
-        
-        <div class="legend">
-            <div class="legend-item">
-                <div class="legend-color outgoing"></div>
-                <span>Outgoing Relationships (Blue)</span>
-            </div>
-            <div class="legend-item">
-                <div class="legend-color incoming"></div>
-                <span>Incoming Relationships (Red)</span>
-            </div>
-        </div>
         
         <div class="controls">
             <button id="toggleViewBtn">Show Table View</button>
-            <button id="groupBtn">Group Nodes</button>
+            <button id="editTableBtn">Edit Table</button>
+            <button id="shareEmbedBtn">Share / Embed</button>
             <div class="filter-controls">
                 <label for="nodeFilter">Filter by Entity:</label>
                 <select id="nodeFilter">
                     <option value="">Show All Entities</option>
+                </select>
+                <label for="relationshipFilter">Filter by Relationship:</label>
+                <select id="relationshipFilter">
+                    <option value="">Show All Relationships</option>
+                </select>
+                <label for="groupFilter">Filter by Group:</label>
+                <select id="groupFilter">
+                    <option value="">Show All Groups</option>
+                    <optgroup label="Entity Groups">
+                        <!-- Entity groups will be populated here -->
+                    </optgroup>
+                    <optgroup label="Relationship Groups">
+                        <!-- Relationship groups will be populated here -->
+                    </optgroup>
                 </select>
                 <button id="clearFilter">Clear Filter</button>
             </div>
@@ -39,22 +50,145 @@
             <!-- Arrow Diagram View (Default) -->
             <div id="diagram-view" class="view active">
                 <svg id="arrow-diagram"></svg>
+                <div class="legend-container">
+                    <div class="legend">
+                        <div class="legend-item">
+                            <div class="legend-color" style="background-color: #2E8B57;"></div>
+                            <span>Legislative & Regulatory</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-color" style="background-color: #4169E1;"></div>
+                            <span>Judiciary</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-color" style="background-color: #FF6347;"></div>
+                            <span>Tribunals & Arbitration</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-color" style="background-color: #9370DB;"></div>
+                            <span>People & Officeholders</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-color" style="background-color: #20B2AA;"></div>
+                            <span>Legal Framework</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-color" style="background-color: #DAA520;"></div>
+                            <span>Non-Administrative</span>
+                        </div>
+                    </div>
+                    <p class="legend-note">
+                        Relationship lines are colored by the source entity's group category
+                    </p>
+                </div>
             </div>
             
             <!-- Table View -->
             <div id="table-view" class="view">
+                <div id="table-controls" style="display: none; margin-bottom: 10px;">
+                    <button id="addRowBtn">Add Row</button>
+                </div>
+                <div id="table-download-controls" style="margin-bottom: 10px;">
+                    <button id="downloadExcelBtn">Download as Excel</button>
+                </div>
                 <table id="data-table">
                     <thead>
                         <tr>
                             <th>Entity</th>
                             <th>Relationship</th>
                             <th>Target</th>
+                            <th id="action-header" style="display: none;">Actions</th>
                         </tr>
                     </thead>
                     <tbody id="table-body">
                         <!-- Judicial entity relationships will be populated by JavaScript -->
                     </tbody>
                 </table>
+            </div>
+            
+            <!-- About This Project Section (visible in both views) -->
+            <div class="project-note">
+                <button class="project-note-toggle" id="projectNoteToggle" aria-expanded="false">
+                    <span class="toggle-icon">▶</span>
+                    <strong>About This Project:</strong>
+                </button>
+                <div class="project-note-content collapsed" id="projectNoteContent">
+                    <p>This Indian Legal Entity Map began as a project to better understand the Indian Judicial System and its structural framework. The initiative emerged from a need to understand the various entities and bodies that influence the functioning of the independent judiciary, including the funding structure, the selection and appointment processes at both central and state levels, and the checks and balances of systems built to enable the Judiciary to act as the custodian and guardian of the Constitution, ensuring that all laws and government actions conform to constitutional principles, interpreting the Constitution, protecting fundamental rights, and exercising judicial review to invalidate any laws or executive acts that violate constitutional provisions; thus, maintaining constitutional supremacy, as a check on the legislature and executive, and safeguarding the rule of law and democratic governance.</p>
+                    <p>This project was initiated following extensive experience managing over 50 cases in India for a financial institution, which raised questions about the efficiency of the justice delivery system. It was also developed after participating in programs that examined the gap between reform initiatives and ground realities. The analysis suggests that judicial reforms face significant challenges, as the incentives for change may not align with broader national progress and the delivery of timely justice.</p>
+                    <p>This documentation is shared in the hope that it may contribute to understanding and inform those working toward meaningful change in the judicial system.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Password Prompt Modal -->
+    <div id="password-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-content password-modal">
+            <h3>Enter Password to Edit</h3>
+            <form id="password-form">
+                <input type="password" id="password-input" placeholder="Enter password" autocomplete="off" />
+                <div id="password-error" class="error-message" style="display: none; color: #d32f2f; margin-top: 10px;"></div>
+                <div class="modal-buttons">
+                    <button type="submit" id="password-submit">Submit</button>
+                    <button type="button" id="password-cancel">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Edit Row Modal -->
+    <div id="edit-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-content edit-modal">
+            <h3>Edit Row</h3>
+            <form id="edit-form">
+                <div class="form-group">
+                    <label for="edit-source">Source Entity:</label>
+                    <input type="text" id="edit-source" list="source-options" placeholder="Enter or select source entity" />
+                    <datalist id="source-options"></datalist>
+                </div>
+                <div class="form-group">
+                    <label for="edit-relationship">Relationship:</label>
+                    <input type="text" id="edit-relationship" list="relationship-options" placeholder="Enter or select relationship" />
+                    <datalist id="relationship-options"></datalist>
+                </div>
+                <div class="form-group">
+                    <label for="edit-target">Target Entity:</label>
+                    <input type="text" id="edit-target" list="target-options" placeholder="Enter or select target entity" />
+                    <datalist id="target-options"></datalist>
+                </div>
+                <div id="edit-error" class="error-message" style="display: none; color: #d32f2f; margin-top: 10px;"></div>
+                <div class="modal-buttons">
+                    <button type="submit" id="edit-save">Save</button>
+                    <button type="button" id="edit-cancel">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Share/Embed Modal -->
+    <div id="share-embed-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-content share-modal" style="max-width: 800px;">
+            <h3>Share / Embed This Visualization</h3>
+            <p style="margin-bottom: 15px; color: #666;">Copy the code below to embed this visualization in your website:</p>
+            <div class="form-group">
+                <label for="embed-code">Embed Code:</label>
+                <textarea id="embed-code" readonly style="width: 100%; height: 200px; font-family: 'Courier New', monospace; font-size: 12px; padding: 10px; border: 1px solid #ddd; border-radius: 4px; background: #f9f9f9; resize: vertical;"></textarea>
+            </div>
+            <div style="margin-top: 10px; display: flex; gap: 10px; align-items: center;">
+                <button id="copy-embed-code" style="padding: 8px 16px; background: #1976d2; color: white; border: none; border-radius: 4px; cursor: pointer;">Copy Code</button>
+                <span id="copy-success" style="color: #2E7D32; display: none;">✓ Copied to clipboard!</span>
+            </div>
+            <div style="margin-top: 20px; padding: 15px; background: #f5f5f5; border-radius: 4px;">
+                <h4 style="margin-top: 0;">Instructions:</h4>
+                <ol style="margin: 10px 0; padding-left: 20px;">
+                    <li>Copy the embed code above</li>
+                    <li>Paste it into your HTML page where you want the visualization to appear</li>
+                    <li>Make sure all required files (data.js, helpers.js, network-diagram.js, embed.js, style.css) are accessible from your website</li>
+                    <li>Adjust the container div's width and height as needed</li>
+                </ol>
+            </div>
+            <div class="modal-buttons" style="margin-top: 20px;">
+                <button type="button" id="share-embed-close">Close</button>
             </div>
         </div>
     </div>
@@ -64,5 +198,6 @@
     <script src="helpers.js?v=1"></script>
     <script src="network-diagram.js?v=1"></script>
     <script src="main.js?v=1"></script>
+    </div>
 </body>
 </html>

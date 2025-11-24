@@ -4,6 +4,7 @@ class LegalSystemVisualization {
     constructor(data, config, colorMap) {
         this.judicialEntityMapData = data.judicialEntityMapData;
         this.groupingData = data.groupingData;
+        this.relationshipGroupingData = data.relationshipGroupingData || [];
         this.config = data.config;
         this.colorMap = data.colorMap;
         
@@ -16,36 +17,92 @@ class LegalSystemVisualization {
         this.linkElements = null;
         this.isAnimating = false;
         this.filteredNodeId = null;
+        this.filteredEntityGroupId = null;
+        this.filteredRelationshipId = null;
+        this.filteredRelationshipGroupId = null;
         this.currentView = 'diagram';
         this._labelsVisible = false; // Initialize label visibility flag
         this.isGrouped = false; // Track if nodes are currently grouped
         this.groupElements = null; // Store group circle elements
         
+        // Edit mode properties
+        this.isEditMode = false;
+        this.editableData = null; // Working copy of data for editing
+        this.accessControl = {
+            isAuthorized: false,
+            config: null // Will be initialized in init() when window.data is available
+        };
+        this.editingRowIndex = null; // Track which row is being edited in modal
+        
+        // Embed/Read-only mode
+        this.readOnly = data.readOnly || false; // Disable edit features when true
+        
         // Create color scheme for different groups
         this.groupColors = {
             ":LegislativeAndRegulatory": "#2E8B57",      // Sea Green
-            ":JudiciaryGroup": "#4169E1",                // Royal Blue
-            ":TribunalsAndArbitrationGroup": "#FF6347",  // Tomato
-            ":PeopleAndOfficeholdersGroup": "#9370DB",   // Medium Purple
-            ":LegalFrameworkGroup": "#20B2AA",           // Light Sea Green
-            ":NonAdministrativeEntitiesGroup": "#DAA520" // Goldenrod
+            ":Judiciary": "#4169E1",                // Royal Blue
+            ":TribunalsAndArbitration": "#FF6347",  // Tomato
+            ":PeopleAndOfficeholders": "#9370DB",   // Medium Purple
+            ":LegalFramework": "#20B2AA",           // Light Sea Green
+            ":NonAdministrativeEntities": "#DAA520" // Goldenrod
+        };
+        
+        // Create color scheme for relationship groups
+        this.relationshipGroupColors = {
+            "Funding": "#4CAF50",           // Green
+            "Oversights": "#FF9800",        // Orange
+            "Appointments": "#2196F3",      // Blue
+            "Governance": "#9C27B0",        // Purple
+            "Accountability": "#F44336",    // Red
+            "Establishment": "#00BCD4",     // Cyan
+            "Operations": "#FFC107",        // Amber
+            "Hierarchy": "#795548",         // Brown
+            "Directives": "#E91E63"         // Pink
         };
         
         // Create mapping from node names to their group colors
         this.nodeGroupMap = this.createNodeGroupMap();
+        
+        // Create mapping from relationship labels to their group colors
+        this.relationshipGroupMap = this.createRelationshipGroupMap();
     }
 
     // Create mapping from node names to their group colors
     createNodeGroupMap() {
         const nodeGroupMap = {};
-        this.groupingData.forEach(item => {
-            nodeGroupMap[item.node] = {
-                group: item.belongsTo,
-                color: this.groupColors[item.belongsTo] || "#999999",
-                label: item.label
-            };
-        });
+        if (this.groupingData) {
+            this.groupingData.forEach(item => {
+                nodeGroupMap[item.node] = {
+                    group: item.belongsTo,
+                    color: this.groupColors[item.belongsTo] || "#999999",
+                    label: item.label
+                };
+            });
+        }
         return nodeGroupMap;
+    }
+
+    // Create mapping from relationship labels to their group colors
+    createRelationshipGroupMap() {
+        const relationshipGroupMap = {};
+        if (this.relationshipGroupingData) {
+            this.relationshipGroupingData.forEach(item => {
+                relationshipGroupMap[item.relationship] = {
+                    group: item.belongsTo,
+                    color: this.relationshipGroupColors[item.belongsTo] || "#999999"
+                };
+            });
+        }
+        return relationshipGroupMap;
+    }
+
+    // Get relationship group color based on relationship label
+    getRelationshipGroupColor(relationshipLabel) {
+        const relationshipInfo = this.relationshipGroupMap[relationshipLabel];
+        if (relationshipInfo && relationshipInfo.color) {
+            return relationshipInfo.color;
+        }
+        return "#999999"; // Default gray if no group found
     }
 
     // Get node color based on its group
@@ -59,6 +116,53 @@ class LegalSystemVisualization {
     getNodeGroup(nodeName) {
         const nodeInfo = this.nodeGroupMap[nodeName];
         return nodeInfo ? nodeInfo.group : "Unknown";
+    }
+
+    // Access Control Methods
+    checkAccess(password) {
+        const config = this.accessControl.config;
+        
+        // If password is empty string, skip password check (for dev/testing)
+        if (!config.password || config.password === "") {
+            return true;
+        }
+        
+        // Check password (case-sensitive)
+        if (password === config.password) {
+            // Future: Add IP checking here if enableIPCheck is true
+            if (config.enableIPCheck && config.ipWhitelist && config.ipWhitelist.length > 0) {
+                // Placeholder for IP checking - would need backend or service
+                const clientIP = this.getClientIP();
+                if (clientIP && !config.ipWhitelist.includes(clientIP)) {
+                    return false;
+                }
+            }
+            return true;
+        }
+        
+        return false;
+    }
+
+    isAuthorized() {
+        return this.accessControl.isAuthorized;
+    }
+
+    authorize(password) {
+        if (this.checkAccess(password)) {
+            this.accessControl.isAuthorized = true;
+            return true;
+        }
+        return false;
+    }
+
+    deauthorize() {
+        this.accessControl.isAuthorized = false;
+    }
+
+    getClientIP() {
+        // Placeholder for future IP detection
+        // Would require backend service or API call
+        return null;
     }
 
     // Clear all highlights and labels
@@ -92,10 +196,17 @@ class LegalSystemVisualization {
 
     // Initialize the visualization
     init() {
+        // Initialize access control config now that window.data should be available
+        if (!this.accessControl.config) {
+            this.accessControl.config = window.data?.accessControlConfig || { password: "", ipWhitelist: [], enableIPCheck: false };
+        }
+        
         this.setupSVG();
         this.setupTable();
         this.setupEventListeners();
         this.setupFilterDropdown();
+        this.setupCombinedGroupFilterDropdown();
+        this.setupRelationshipFilterDropdown();
         this.showDiagramView();
     }
 
@@ -104,9 +215,21 @@ class LegalSystemVisualization {
         const container = d3.select("#arrow-diagram");
         container.selectAll(".links, .nodes").remove();
         
+        // Get container dimensions for responsive sizing
+        const containerElement = container.node();
+        const containerWidth = containerElement ? containerElement.getBoundingClientRect().width || this.config.width : this.config.width;
+        const containerHeight = containerElement ? containerElement.getBoundingClientRect().height || this.config.height : this.config.height;
+        
+        // Store actual dimensions for calculations
+        this.actualWidth = containerWidth;
+        this.actualHeight = containerHeight;
+        
+        // Use viewBox for responsive scaling while maintaining aspect ratio
         this.svg = container
-            .attr("width", this.config.width)
-            .attr("height", this.config.height);
+            .attr("width", "100%")
+            .attr("height", "100%")
+            .attr("viewBox", `0 0 ${this.config.width} ${this.config.height}`)
+            .attr("preserveAspectRatio", "xMidYMid meet");
         
         // Add background click event to clear highlights and labels
         this.svg.on("click", (event) => {
@@ -116,9 +239,46 @@ class LegalSystemVisualization {
             }
         });
         
+        // Add resize handler for responsive updates
+        this.setupResizeHandler();
+        
         this.createArrowMarkers();
         this.createForceSimulation();
         this.prepareDiagramData();
+    }
+    
+    // Setup resize handler for responsive updates
+    setupResizeHandler() {
+        // Debounce resize events
+        let resizeTimeout;
+        const handleResize = () => {
+            clearTimeout(resizeTimeout);
+            resizeTimeout = setTimeout(() => {
+                const container = d3.select("#arrow-diagram");
+                const containerElement = container.node();
+                if (containerElement) {
+                    const containerWidth = containerElement.getBoundingClientRect().width || this.config.width;
+                    const containerHeight = containerElement.getBoundingClientRect().height || this.config.height;
+                    
+                    this.actualWidth = containerWidth;
+                    this.actualHeight = containerHeight;
+                    
+                    // Update simulation center if needed
+                    if (this.simulation) {
+                        this.simulation.force("center", d3.forceCenter(this.config.width / 2, this.config.height / 2 - 100).strength(this.config.centerStrength * 0.5));
+                        this.simulation.force("x", d3.forceX(this.config.width / 2).strength(this.config.xStrength * 0.3));
+                        this.simulation.force("y", d3.forceY(this.config.height / 2 - 100).strength(this.config.yStrength * 0.3));
+                        this.simulation.alpha(0.3).restart();
+                    }
+                }
+            }, 250);
+        };
+        
+        window.addEventListener('resize', handleResize);
+        window.addEventListener('orientationchange', handleResize);
+        
+        // Store handler for cleanup if needed
+        this._resizeHandler = handleResize;
     }
 
     // Create arrow markers for group colors
@@ -127,22 +287,45 @@ class LegalSystemVisualization {
         if (defs.empty()) {
             defs = this.svg.append("defs");
             
-            // Create markers for each group color
+            // Create markers for each entity group color
             Object.entries(this.groupColors).forEach(([groupName, colorValue]) => {
                 const markerId = `arrowhead-${colorValue.replace('#', '')}`;
-                defs.append("marker")
-                    .attr("id", markerId)
-                    .attr("viewBox", "0 -5 10 10")
-                    .attr("refX", 9)
-                    .attr("refY", 0)
-                    .attr("orient", "auto")
-                    .attr("markerWidth", 6)
-                    .attr("markerHeight", 6)
-                    .attr("xoverflow", "visible")
-                    .append("path")
-                    .attr("d", "M 0,-5 L 10 ,0 L 0,5")
-                    .attr("fill", colorValue);
+                if (!defs.select(`#${markerId}`).node()) {
+                    defs.append("marker")
+                        .attr("id", markerId)
+                        .attr("viewBox", "0 -5 10 10")
+                        .attr("refX", 9)
+                        .attr("refY", 0)
+                        .attr("orient", "auto")
+                        .attr("markerWidth", 6)
+                        .attr("markerHeight", 6)
+                        .attr("xoverflow", "visible")
+                        .append("path")
+                        .attr("d", "M 0,-5 L 10 ,0 L 0,5")
+                        .attr("fill", colorValue);
+                }
             });
+            
+            // Create markers for each relationship group color
+            if (this.relationshipGroupColors) {
+                Object.entries(this.relationshipGroupColors).forEach(([groupName, colorValue]) => {
+                    const markerId = `arrowhead-${colorValue.replace('#', '')}`;
+                    if (!defs.select(`#${markerId}`).node()) {
+                        defs.append("marker")
+                            .attr("id", markerId)
+                            .attr("viewBox", "0 -5 10 10")
+                            .attr("refX", 9)
+                            .attr("refY", 0)
+                            .attr("orient", "auto")
+                            .attr("markerWidth", 6)
+                            .attr("markerHeight", 6)
+                            .attr("xoverflow", "visible")
+                            .append("path")
+                            .attr("d", "M 0,-5 L 10 ,0 L 0,5")
+                            .attr("fill", colorValue);
+                    }
+                });
+            }
             
         }
     }
@@ -369,13 +552,20 @@ class LegalSystemVisualization {
             .append("path")
             .attr("class", d => `link`)
             .attr("marker-end", d => {
-                const sourceColor = this.getNodeColor(d.source.name);
-                const markerId = `arrowhead-${sourceColor.replace('#', '')}`;
+                // Use relationship group color if available, otherwise use source node color
+                const relationshipLabel = d.label || d.relationshipLabel;
+                const linkColor = relationshipLabel && this.relationshipGroupMap[relationshipLabel] 
+                    ? this.getRelationshipGroupColor(relationshipLabel)
+                    : this.getNodeColor(d.source.name);
+                const markerId = `arrowhead-${linkColor.replace('#', '')}`;
                 return `url(#${markerId})`;
             })
             .attr("stroke", d => {
-                const sourceColor = this.getNodeColor(d.source.name);
-                return sourceColor;
+                // Use relationship group color if available, otherwise use source node color
+                const relationshipLabel = d.label || d.relationshipLabel;
+                return relationshipLabel && this.relationshipGroupMap[relationshipLabel] 
+                    ? this.getRelationshipGroupColor(relationshipLabel)
+                    : this.getNodeColor(d.source.name);
             })
             .attr("fill", "none")
             .style("opacity", 0)
@@ -756,6 +946,12 @@ class LegalSystemVisualization {
         
         const tableView = document.getElementById("table-view");
         const diagramView = document.getElementById("diagram-view");
+        const container = document.querySelector('.container');
+        
+        // Remove class to show legend and project note
+        if (container) {
+            container.classList.remove('table-view-active');
+        }
         
         tableView.classList.remove("active");
         tableView.classList.add("fade-out");
@@ -823,35 +1019,320 @@ class LegalSystemVisualization {
         // Clear existing rows
         tableBody.selectAll("tr").remove();
         
-        // Get filtered data if filter is active
-        const dataToShow = window.helpers.getFilteredTableData(this.judicialEntityMapData, this.filteredNodeId);
+        // Get data - use editableData if in edit mode, otherwise use original data
+        let dataSource;
+        if (this.isEditMode && this.editableData && this.editableData.length > 0) {
+            dataSource = this.editableData;
+        } else {
+            dataSource = this.judicialEntityMapData;
+        }
+        
+        if (!dataSource || !dataSource.length) {
+            // Fallback to window.data
+            dataSource = window.data?.judicialEntityMapData;
+        }
+        
+        if (!dataSource || !dataSource.length) {
+            console.error('No data available for table!');
+            // Show error message in table
+            const colspan = this.isEditMode ? 4 : 3;
+            tableBody.append("tr")
+                .append("td")
+                .attr("colspan", colspan)
+                .text("No data available")
+                .style("text-align", "center")
+                .style("padding", "20px")
+                .style("color", "#999");
+            return;
+        }
+        
+        // Get filtered data if filter is active (only in view mode)
+        let dataToShow;
+        if (this.isEditMode) {
+            // In edit mode, show all editable data (no filtering)
+            dataToShow = dataSource;
+        } else {
+            // In view mode, apply filters
+            if (window.helpers && window.helpers.getFilteredTableData) {
+                dataToShow = window.helpers.getFilteredTableData(dataSource, this.filteredNodeId, this.filteredEntityGroupId, this.filteredRelationshipId, this.filteredRelationshipGroupId, this.relationshipGroupingData || window.data?.relationshipGroupingData, this.groupingData || window.data?.groupingData);
+            } else {
+                // Fallback filtering
+                dataToShow = dataSource.filter(link => {
+                    const matchesNode = !this.filteredNodeId || 
+                        link.source === this.filteredNodeId || 
+                        link.target === this.filteredNodeId;
+                    const matchesRelationship = !this.filteredRelationshipId || 
+                        link.label === this.filteredRelationshipId;
+                    return matchesNode && matchesRelationship;
+                });
+            }
+        }
+        
+        if (!dataToShow || dataToShow.length === 0) {
+            console.warn('No filtered data to display in table');
+            const colspan = this.isEditMode ? 4 : 3;
+            tableBody.append("tr")
+                .append("td")
+                .attr("colspan", colspan)
+                .text("No data matches the current filter")
+                .style("text-align", "center")
+                .style("padding", "20px")
+                .style("color", "#999");
+            return;
+        }
         
         // Create rows for each relationship
         const rows = tableBody.selectAll("tr")
-            .data(dataToShow)
+            .data(dataToShow, (d, i) => i) // Use index as key for stable binding
             .enter()
             .append("tr")
             .attr("class", "table-row")
-            .style("opacity", 0)
-            .transition()
+            .attr("data-index", (d, i) => i)
+            .style("opacity", 0);
+        
+        // Add cells for each row
+        const self = this;
+        rows.each(function(d, rowIndex) {
+            if (!d) {
+                console.warn('Invalid data item:', d);
+                return;
+            }
+            const row = d3.select(this);
+            
+            if (self.isEditMode) {
+                // Edit mode: create editable cells
+                // Source cell
+                const sourceCell = row.append("td").attr("class", "editable-cell");
+                sourceCell.append("input")
+                    .attr("type", "text")
+                    .attr("class", "cell-input")
+                    .attr("value", d.source || '')
+                    .on("blur", function() {
+                        const newValue = d3.select(this).property("value");
+                        self.saveRowChanges(rowIndex, newValue, d.label, d.target);
+                    })
+                    .on("keydown", function(event) {
+                        if (event.key === "Enter") {
+                            event.preventDefault();
+                            this.blur();
+                        }
+                    });
+                
+                // Relationship cell
+                const labelCell = row.append("td").attr("class", "editable-cell");
+                labelCell.append("input")
+                    .attr("type", "text")
+                    .attr("class", "cell-input")
+                    .attr("value", d.label || '')
+                    .on("blur", function() {
+                        const newValue = d3.select(this).property("value");
+                        self.saveRowChanges(rowIndex, d.source, newValue, d.target);
+                    })
+                    .on("keydown", function(event) {
+                        if (event.key === "Enter") {
+                            event.preventDefault();
+                            this.blur();
+                        }
+                    });
+                
+                // Target cell
+                const targetCell = row.append("td").attr("class", "editable-cell");
+                targetCell.append("input")
+                    .attr("type", "text")
+                    .attr("class", "cell-input")
+                    .attr("value", d.target || '')
+                    .on("blur", function() {
+                        const newValue = d3.select(this).property("value");
+                        self.saveRowChanges(rowIndex, d.source, d.label, newValue);
+                    })
+                    .on("keydown", function(event) {
+                        if (event.key === "Enter") {
+                            event.preventDefault();
+                            this.blur();
+                        }
+                    });
+                
+                // Actions cell
+                const actionsCell = row.append("td").attr("class", "action-buttons");
+                const editBtn = actionsCell.append("button")
+                    .attr("class", "btn-edit-row")
+                    .text("Edit")
+                    .on("click", function(event) {
+                        event.stopPropagation();
+                        self.openEditModal(d, rowIndex);
+                    });
+                const deleteBtn = actionsCell.append("button")
+                    .attr("class", "btn-delete-row")
+                    .text("Delete")
+                    .on("click", function(event) {
+                        event.stopPropagation();
+                        if (confirm("Are you sure you want to delete this row?")) {
+                            self.deleteRow(rowIndex);
+                        }
+                    });
+                
+                // Make row clickable to open modal
+                row.style("cursor", "pointer")
+                    .on("click", function() {
+                        self.openEditModal(d, rowIndex);
+                    });
+            } else {
+                // View mode: create read-only cells
+                row.append("td").text(d.source || 'N/A');
+                row.append("td").text(d.label || 'N/A');
+                row.append("td").text(d.target || 'N/A');
+            }
+        });
+        
+        // Fade in rows
+        rows.transition()
             .duration(500)
             .style("opacity", 1);
         
-        // Add cells for each row
-        rows.each(function(d) {
-            const row = d3.select(this);
-            row.append("td").text(d.source);
-            row.append("td").text(d.label);
-            row.append("td").text(d.target);
-        });
+        console.log('Table rows created:', rows.size(), 'in', this.isEditMode ? 'edit' : 'view', 'mode');
     }
 
     // Setup event listeners
     setupEventListeners() {
         document.getElementById("toggleViewBtn").addEventListener("click", () => this.toggleView());
-        document.getElementById("groupBtn").addEventListener("click", () => this.toggleGrouping());
         document.getElementById("nodeFilter").addEventListener("change", (event) => this.handleNodeFilter(event));
-        document.getElementById("clearFilter").addEventListener("click", () => this.clearNodeFilter());
+        document.getElementById("relationshipFilter").addEventListener("change", (event) => this.handleRelationshipFilter(event));
+        const groupFilter = document.getElementById("groupFilter");
+        if (groupFilter) {
+            groupFilter.addEventListener("change", (event) => this.handleGroupFilter(event));
+        }
+        document.getElementById("clearFilter").addEventListener("click", () => this.clearAllFilters());
+        
+        // Edit Table button (only if not in read-only mode)
+        const editTableBtn = document.getElementById("editTableBtn");
+        if (editTableBtn && !this.readOnly) {
+            editTableBtn.addEventListener("click", () => this.toggleEditMode());
+        } else if (editTableBtn && this.readOnly) {
+            // Hide edit button in read-only mode
+            editTableBtn.style.display = 'none';
+        }
+        
+        // Add Row button
+        const addRowBtn = document.getElementById("addRowBtn");
+        if (addRowBtn) {
+            addRowBtn.addEventListener("click", () => this.addNewRow());
+        }
+        
+        // Download as Excel button
+        const downloadExcelBtn = document.getElementById("downloadExcelBtn");
+        if (downloadExcelBtn) {
+            downloadExcelBtn.addEventListener("click", () => this.downloadTableAsExcel());
+        }
+        
+        // Share/Embed button
+        const shareEmbedBtn = document.getElementById("shareEmbedBtn");
+        if (shareEmbedBtn) {
+            shareEmbedBtn.addEventListener("click", () => this.showShareEmbedModal());
+        }
+        
+        // Share/Embed modal close button
+        const shareEmbedClose = document.getElementById("share-embed-close");
+        if (shareEmbedClose) {
+            shareEmbedClose.addEventListener("click", () => this.hideShareEmbedModal());
+        }
+        
+        // Copy embed code button
+        const copyEmbedCodeBtn = document.getElementById("copy-embed-code");
+        if (copyEmbedCodeBtn) {
+            copyEmbedCodeBtn.addEventListener("click", () => this.copyEmbedCode());
+        }
+    }
+    
+    // Share/Embed Modal Methods
+    showShareEmbedModal() {
+        const modal = document.getElementById("share-embed-modal");
+        const embedCodeTextarea = document.getElementById("embed-code");
+        
+        if (!modal || !embedCodeTextarea) {
+            console.error('Share/Embed modal elements not found');
+            return;
+        }
+        
+        // Generate embed code
+        const currentUrl = window.location.origin + window.location.pathname.replace(/\/[^/]*$/, '');
+        const embedCode = `<!-- Legal System Visualization Embed -->
+<div id="legal-system-viz" style="width: 100%; height: 700px; border: 1px solid #ddd; border-radius: 4px;"></div>
+
+<!-- Include D3.js -->
+<script src="https://d3js.org/d3.v7.min.js"></script>
+
+<!-- Include CSS -->
+<link rel="stylesheet" href="${currentUrl}/style.css">
+
+<!-- Include required scripts -->
+<script src="${currentUrl}/data.js"></script>
+<script src="${currentUrl}/helpers.js"></script>
+<script src="${currentUrl}/network-diagram.js"></script>
+<script src="${currentUrl}/embed.js"></script>
+
+<!-- Initialize visualization -->
+<script>
+  LegalSystemEmbed.init({
+    container: '#legal-system-viz',
+    view: 'diagram',
+    showFilters: true
+  });
+</script>`;
+        
+        embedCodeTextarea.value = embedCode;
+        modal.style.display = 'flex';
+    }
+    
+    hideShareEmbedModal() {
+        const modal = document.getElementById("share-embed-modal");
+        const copySuccess = document.getElementById("copy-success");
+        
+        if (modal) {
+            modal.style.display = 'none';
+        }
+        if (copySuccess) {
+            copySuccess.style.display = 'none';
+        }
+    }
+    
+    copyEmbedCode() {
+        const embedCodeTextarea = document.getElementById("embed-code");
+        const copySuccess = document.getElementById("copy-success");
+        
+        if (!embedCodeTextarea) {
+            return;
+        }
+        
+        // Select and copy text
+        embedCodeTextarea.select();
+        embedCodeTextarea.setSelectionRange(0, 99999); // For mobile devices
+        
+        try {
+            document.execCommand('copy');
+            
+            // Show success message
+            if (copySuccess) {
+                copySuccess.style.display = 'inline';
+                setTimeout(() => {
+                    copySuccess.style.display = 'none';
+                }, 2000);
+            }
+        } catch (err) {
+            console.error('Failed to copy text:', err);
+            // Fallback: try modern clipboard API
+            if (navigator.clipboard) {
+                navigator.clipboard.writeText(embedCodeTextarea.value).then(() => {
+                    if (copySuccess) {
+                        copySuccess.style.display = 'inline';
+                        setTimeout(() => {
+                            copySuccess.style.display = 'none';
+                        }, 2000);
+                    }
+                }).catch(err => {
+                    console.error('Failed to copy to clipboard:', err);
+                });
+            }
+        }
     }
 
     // Toggle between grouped and ungrouped view
@@ -870,9 +1351,6 @@ class LegalSystemVisualization {
         
         this.isAnimating = true;
         this.isGrouped = true;
-        
-        // Update button text
-        document.getElementById("groupBtn").textContent = "Ungroup Nodes";
         
         // Hide individual nodes and links
         this.nodeElements
@@ -902,9 +1380,6 @@ class LegalSystemVisualization {
         
         this.isAnimating = true;
         this.isGrouped = false;
-        
-        // Update button text
-        document.getElementById("groupBtn").textContent = "Group Nodes";
         
         // Remove group circles
         this.removeGroupCircles();
@@ -1053,10 +1528,6 @@ class LegalSystemVisualization {
                 return (sourceGroup === groupData.key || targetGroup === groupData.key) ? 1 : 0;
             });
         
-        // Update button to show we're in expanded view
-        document.getElementById("groupBtn").textContent = "Show All Groups";
-        
-        // Add a back button or modify the group button behavior
         setTimeout(() => {
             this.isAnimating = false;
         }, 500);
@@ -1066,11 +1537,11 @@ class LegalSystemVisualization {
     getGroupLabel(groupKey) {
         const groupLabels = {
             ":LegislativeAndRegulatory": "Legislative & Regulatory",
-            ":JudiciaryGroup": "Judiciary",
-            ":TribunalsAndArbitrationGroup": "Tribunals & Arbitration",
-            ":PeopleAndOfficeholdersGroup": "People & Officeholders",
-            ":LegalFrameworkGroup": "Legal Framework",
-            ":NonAdministrativeEntitiesGroup": "Non-Administrative"
+            ":Judiciary": "Judiciary",
+            ":TribunalsAndArbitration": "Tribunals & Arbitration",
+            ":PeopleAndOfficeholders": "People & Officeholders",
+            ":LegalFramework": "Legal Framework",
+            ":NonAdministrativeEntities": "Non-Administrative"
         };
         return groupLabels[groupKey] || groupKey.replace(":", "");
     }
@@ -1102,6 +1573,135 @@ class LegalSystemVisualization {
         });
     }
 
+    // Setup combined group filter dropdown (entity groups and relationship groups)
+    setupCombinedGroupFilterDropdown() {
+        const groupFilter = document.getElementById("groupFilter");
+        
+        if (!groupFilter) {
+            console.warn('Group filter element not found');
+            return;
+        }
+        
+        // Clear existing options
+        groupFilter.innerHTML = '<option value="">Show All Groups</option>';
+        
+        // Get entity groups
+        const entityGroups = {};
+        if (this.groupingData && this.groupingData.length > 0) {
+            this.groupingData.forEach(item => {
+                if (!entityGroups[item.belongsTo]) {
+                    entityGroups[item.belongsTo] = [];
+                }
+                entityGroups[item.belongsTo].push(item.node);
+            });
+        }
+        
+        // Get relationship groups
+        const relationshipGroups = {};
+        if (this.relationshipGroupingData && this.relationshipGroupingData.length > 0) {
+            this.relationshipGroupingData.forEach(item => {
+                if (!relationshipGroups[item.belongsTo]) {
+                    relationshipGroups[item.belongsTo] = [];
+                }
+                relationshipGroups[item.belongsTo].push(item.relationship);
+            });
+        }
+        
+        // Create Entity Groups optgroup
+        const entityOptgroup = document.createElement("optgroup");
+        entityOptgroup.label = "Entity Groups";
+        
+        const entityGroupNames = Object.keys(entityGroups).sort();
+        entityGroupNames.forEach(groupName => {
+            const option = document.createElement("option");
+            option.value = `entity:${groupName}`;
+            option.textContent = groupName;
+            entityOptgroup.appendChild(option);
+        });
+        
+        if (entityOptgroup.children.length > 0) {
+            groupFilter.appendChild(entityOptgroup);
+        }
+        
+        // Create Relationship Groups optgroup
+        const relationshipOptgroup = document.createElement("optgroup");
+        relationshipOptgroup.label = "Relationship Groups";
+        
+        const relationshipGroupNames = Object.keys(relationshipGroups).sort();
+        relationshipGroupNames.forEach(groupName => {
+            const option = document.createElement("option");
+            option.value = `relationship:${groupName}`;
+            option.textContent = groupName;
+            relationshipOptgroup.appendChild(option);
+        });
+        
+        if (relationshipOptgroup.children.length > 0) {
+            groupFilter.appendChild(relationshipOptgroup);
+        }
+    }
+
+    // Setup relationship filter dropdown
+    setupRelationshipFilterDropdown() {
+        const relationshipFilter = document.getElementById("relationshipFilter");
+        
+        // Get unique relationship labels
+        const uniqueRelationships = [...new Set(
+            this.judicialEntityMapData.map(d => d.label)
+        )].sort();
+        
+        // Get relationship groups
+        const relationshipGroups = {};
+        if (this.relationshipGroupingData && this.relationshipGroupingData.length > 0) {
+            this.relationshipGroupingData.forEach(item => {
+                if (!relationshipGroups[item.belongsTo]) {
+                    relationshipGroups[item.belongsTo] = [];
+                }
+                relationshipGroups[item.belongsTo].push(item.relationship);
+            });
+        }
+        
+        // Clear existing options
+        relationshipFilter.innerHTML = '<option value="">Show All Relationships</option>';
+        
+        // Add relationship groups as optgroups
+        const groupNames = Object.keys(relationshipGroups).sort();
+        groupNames.forEach(groupName => {
+            const optgroup = document.createElement("optgroup");
+            optgroup.label = `Group: ${groupName}`;
+            
+            // Add individual relationships in this group
+            relationshipGroups[groupName].sort().forEach(relationship => {
+                if (uniqueRelationships.includes(relationship)) {
+                    const option = document.createElement("option");
+                    option.value = relationship;
+                    option.textContent = relationship;
+                    optgroup.appendChild(option);
+                }
+            });
+            
+            if (optgroup.children.length > 0) {
+                relationshipFilter.appendChild(optgroup);
+            }
+        });
+        
+        // Add ungrouped relationships (if any)
+        const groupedRelationships = new Set();
+        Object.values(relationshipGroups).forEach(rels => rels.forEach(r => groupedRelationships.add(r)));
+        const ungroupedRelationships = uniqueRelationships.filter(r => !groupedRelationships.has(r));
+        
+        if (ungroupedRelationships.length > 0) {
+            const optgroup = document.createElement("optgroup");
+            optgroup.label = "Ungrouped";
+            ungroupedRelationships.forEach(relationship => {
+                const option = document.createElement("option");
+                option.value = relationship;
+                option.textContent = relationship;
+                optgroup.appendChild(option);
+            });
+            relationshipFilter.appendChild(optgroup);
+        }
+    }
+
     // Toggle between diagram and table views
     toggleView() {
         if (this.isAnimating) return;
@@ -1115,22 +1715,40 @@ class LegalSystemVisualization {
 
     // Show table view
     showTableView() {
-        if (this.isAnimating) return;
+        console.log('showTableView called, isAnimating:', this.isAnimating);
+        if (this.isAnimating) {
+            console.log('Already animating, returning');
+            return;
+        }
         this.isAnimating = true;
         
         const toggleBtn = document.getElementById("toggleViewBtn");
+        if (!toggleBtn) {
+            console.error('toggleViewBtn not found!');
+            return;
+        }
         toggleBtn.disabled = true;
         toggleBtn.textContent = "Show Diagram View";
         
         const tableView = document.getElementById("table-view");
         const diagramView = document.getElementById("diagram-view");
         
+        if (!tableView) {
+            console.error('table-view element not found!');
+            return;
+        }
+        
+        console.log('tableView element found:', !!tableView);
+        console.log('diagramView element found:', !!diagramView);
+        
         // Stop simulation
         this.simulation?.stop();
         
         // Fade out diagram
-        diagramView.classList.remove("active");
-        diagramView.classList.add("fade-out");
+        if (diagramView) {
+            diagramView.classList.remove("active");
+            diagramView.classList.add("fade-out");
+        }
         
         this.nodeElements
             ?.transition()
@@ -1143,15 +1761,19 @@ class LegalSystemVisualization {
             .style("opacity", 0);
         
         setTimeout(() => {
+            console.log('Setting table view to active');
             tableView.classList.remove("fade-out");
             tableView.classList.add("active");
             
+            console.log('tableView classes:', tableView.className);
+            console.log('Calling setupTable...');
             this.setupTable();
             
             setTimeout(() => {
                 toggleBtn.disabled = false;
                 this.isAnimating = false;
                 this.currentView = 'table';
+                console.log('Table view setup complete, currentView:', this.currentView);
             }, 1000);
             
         }, 500);
@@ -1172,27 +1794,111 @@ class LegalSystemVisualization {
     applyNodeFilter(nodeId) {
         this.filteredNodeId = nodeId;
         
-        // Find the selected node data
-        const selectedNode = this.nodeElements.data().find(d => d.id === nodeId);
-        if (!selectedNode) return;
+        // Apply filters (handles both node and relationship filters)
+        this.applyFilters();
         
-        // Apply enhanced highlighting using the same system as mouse hover
-        this.highlightSelectedNode(selectedNode);
+        // Update table
+        this.setupTable();
+    }
+
+    // Handle relationship filter change
+    handleRelationshipFilter(event) {
+        const selectedRelationshipId = event.target.value;
         
-        // Show relationship labels for filtered node
-        if (this.currentView === 'diagram') {
-            setTimeout(() => {
-                this.showFilteredNodeLabels(nodeId);
-            }, 200);
+        if (selectedRelationshipId) {
+            this.applyRelationshipFilter(selectedRelationshipId);
+        } else {
+            this.clearRelationshipFilter();
+        }
+    }
+
+    // Apply relationship filter
+    applyRelationshipFilter(relationshipId) {
+        // Trim whitespace to ensure exact match
+        this.filteredRelationshipId = relationshipId ? relationshipId.trim() : null;
+        
+        // Apply filtering to nodes and links
+        this.applyFilters();
+        
+        // Update table
+        this.setupTable();
+    }
+
+    // Clear relationship filter
+    clearRelationshipFilter() {
+        this.filteredRelationshipId = null;
+        
+        // Reapply remaining filters
+        this.applyFilters();
+        
+        // Reset dropdown
+        document.getElementById("relationshipFilter").value = "";
+        
+        // Update table
+        this.setupTable();
+    }
+
+    // Handle combined group filter change
+    handleGroupFilter(event) {
+        const selectedValue = event.target.value;
+        
+        if (selectedValue) {
+            this.applyGroupFilter(selectedValue);
+        } else {
+            this.clearGroupFilter();
+        }
+    }
+
+    // Apply group filter (handles both entity and relationship groups)
+    applyGroupFilter(value) {
+        if (!value) {
+            this.filteredEntityGroupId = null;
+            this.filteredRelationshipGroupId = null;
+            this.applyFilters();
+            this.setupTable();
+            return;
+        }
+        
+        // Parse the value to determine if it's an entity or relationship group
+        if (value.startsWith('entity:')) {
+            this.filteredEntityGroupId = value.substring(7); // Remove 'entity:' prefix (7 chars)
+            this.filteredRelationshipGroupId = null;
+        } else if (value.startsWith('relationship:')) {
+            this.filteredRelationshipGroupId = value.substring(13); // Remove 'relationship:' prefix (13 chars)
+            this.filteredEntityGroupId = null;
+        }
+        
+        // Apply filtering to nodes and links
+        this.applyFilters();
+        
+        // Update table
+        this.setupTable();
+    }
+
+    // Clear group filter
+    clearGroupFilter() {
+        this.filteredEntityGroupId = null;
+        this.filteredRelationshipGroupId = null;
+        
+        // Reapply remaining filters
+        this.applyFilters();
+        
+        // Reset dropdown
+        const groupFilter = document.getElementById("groupFilter");
+        if (groupFilter) {
+            groupFilter.value = "";
         }
         
         // Update table
         this.setupTable();
     }
 
-    // Clear node filter
-    clearNodeFilter() {
+    // Clear all filters (both node and relationship)
+    clearAllFilters() {
         this.filteredNodeId = null;
+        this.filteredEntityGroupId = null;
+        this.filteredRelationshipId = null;
+        this.filteredRelationshipGroupId = null;
         
         // Reset all nodes and links to full opacity
         this.nodeElements?.style("opacity", 1);
@@ -1201,11 +1907,769 @@ class LegalSystemVisualization {
         // Hide relationship labels
         this.hideRelationshipLabel();
         
+        // Reset dropdowns
+        document.getElementById("nodeFilter").value = "";
+        document.getElementById("relationshipFilter").value = "";
+        const groupFilter = document.getElementById("groupFilter");
+        if (groupFilter) {
+            groupFilter.value = "";
+        }
+        
+        // Update table
+        this.setupTable();
+    }
+
+    // Apply both node and relationship filters
+    applyFilters() {
+        // Helper function to normalize and compare relationship labels
+        const matchesRelationship = (linkLabel, filterLabel) => {
+            if (!filterLabel) return true;
+            const normalizedLink = linkLabel ? linkLabel.trim() : '';
+            const normalizedFilter = filterLabel.trim();
+            return normalizedLink === normalizedFilter;
+        };
+        
+        // Helper function to check if relationship matches relationship group
+        const matchesRelationshipGroup = (linkLabel) => {
+            if (!this.filteredRelationshipGroupId) return true;
+            const relationshipInfo = this.relationshipGroupMap[linkLabel];
+            return relationshipInfo && relationshipInfo.group === this.filteredRelationshipGroupId;
+        };
+        
+        // Get entities in filtered entity group
+        const entitiesInGroup = new Set();
+        if (this.filteredEntityGroupId && this.groupingData) {
+            this.groupingData.forEach(item => {
+                if (item.belongsTo === this.filteredEntityGroupId) {
+                    entitiesInGroup.add(item.node);
+                }
+            });
+        }
+        
+        // If node filter is active, use node filtering logic
+        if (this.filteredNodeId) {
+            const selectedNode = this.nodeElements.data().find(d => d.id === this.filteredNodeId);
+            if (selectedNode) {
+                this.highlightSelectedNode(selectedNode);
+            }
+            
+            // Filter nodes by connection to selected node
+            this.nodeElements?.style("opacity", d => {
+                const isConnected = this.judicialEntityMapData.some(link => {
+                    const matchesNode = (link.source === this.filteredNodeId && link.target === d.id) ||
+                                      (link.target === this.filteredNodeId && link.source === d.id);
+                    const matchesRel = matchesRelationship(link.label, this.filteredRelationshipId);
+                    const matchesRelGroup = matchesRelationshipGroup(link.label);
+                    const matchesEntityGroup = !this.filteredEntityGroupId || 
+                        entitiesInGroup.has(link.source) || entitiesInGroup.has(link.target);
+                    return matchesNode && matchesRel && matchesRelGroup && matchesEntityGroup;
+                });
+                return isConnected ? 1 : 0.2;
+            });
+            
+            // Filter links by node and relationship
+            this.linkElements?.style("opacity", d => {
+                const matchesNode = (d.source.id === this.filteredNodeId || d.target.id === this.filteredNodeId);
+                const matchesRel = matchesRelationship(d.label, this.filteredRelationshipId);
+                const matchesRelGroup = matchesRelationshipGroup(d.label);
+                const matchesEntityGroup = !this.filteredEntityGroupId || 
+                    entitiesInGroup.has(d.source.id) || entitiesInGroup.has(d.target.id);
+                return matchesNode && matchesRel && matchesRelGroup && matchesEntityGroup ? 1 : 0.2;
+            });
+            
+            // Show relationship labels for filtered node
+            if (this.currentView === 'diagram') {
+                setTimeout(() => {
+                    this.showFilteredNodeLabels(this.filteredNodeId);
+                }, 200);
+            }
+        } else if (this.filteredEntityGroupId) {
+            // Entity group filter is active
+            // Filter nodes that are in the selected group
+            this.nodeElements?.style("opacity", d => {
+                const inGroup = entitiesInGroup.has(d.id);
+                if (!inGroup) return 0.2;
+                
+                // Also check relationship filters if active
+                if (this.filteredRelationshipId || this.filteredRelationshipGroupId) {
+                    const hasMatchingLink = this.judicialEntityMapData.some(link => {
+                        const matchesNode = link.source === d.id || link.target === d.id;
+                        const matchesRel = matchesRelationship(link.label, this.filteredRelationshipId);
+                        const matchesRelGroup = matchesRelationshipGroup(link.label);
+                        return matchesNode && matchesRel && matchesRelGroup;
+                    });
+                    return hasMatchingLink ? 1 : 0.2;
+                }
+                return 1;
+            });
+            
+            // Filter links by entity group and relationship filters
+            this.linkElements?.style("opacity", d => {
+                const matchesEntityGroup = entitiesInGroup.has(d.source.id) || entitiesInGroup.has(d.target.id);
+                const matchesRel = matchesRelationship(d.label, this.filteredRelationshipId);
+                const matchesRelGroup = matchesRelationshipGroup(d.label);
+                return matchesEntityGroup && matchesRel && matchesRelGroup ? 1 : 0.2;
+            });
+        } else if (this.filteredRelationshipId || this.filteredRelationshipGroupId) {
+            // Only relationship filter is active
+            // Filter nodes that are part of relationships with the selected type
+            const nodesInFilteredRelationships = new Set();
+            this.judicialEntityMapData.forEach(link => {
+                const matchesRel = matchesRelationship(link.label, this.filteredRelationshipId);
+                const matchesRelGroup = matchesRelationshipGroup(link.label);
+                if (matchesRel && matchesRelGroup) {
+                    nodesInFilteredRelationships.add(link.source);
+                    nodesInFilteredRelationships.add(link.target);
+                }
+            });
+            
+            this.nodeElements?.style("opacity", d => {
+                return nodesInFilteredRelationships.has(d.id) ? 1 : 0.2;
+            });
+            
+            // Filter links by relationship type
+            this.linkElements?.style("opacity", d => {
+                const matchesRel = matchesRelationship(d.label, this.filteredRelationshipId);
+                const matchesRelGroup = matchesRelationshipGroup(d.label);
+                return matchesRel && matchesRelGroup ? 1 : 0.2;
+            });
+        } else {
+            // No filters active
+            this.nodeElements?.style("opacity", 1);
+            this.linkElements?.style("opacity", 1);
+        }
+    }
+
+    // Clear node filter (kept for backward compatibility, now calls clearAllFilters)
+    clearNodeFilter() {
+        this.filteredNodeId = null;
+        
+        // Reapply remaining filters
+        this.applyFilters();
+        
         // Reset dropdown
         document.getElementById("nodeFilter").value = "";
         
         // Update table
         this.setupTable();
+    }
+
+    // Password Prompt Methods
+    showPasswordPrompt() {
+        const passwordModal = document.getElementById("password-modal");
+        const passwordInput = document.getElementById("password-input");
+        const passwordError = document.getElementById("password-error");
+        
+        if (!passwordModal) return;
+        
+        // Clear previous error and input
+        passwordError.style.display = "none";
+        passwordError.textContent = "";
+        passwordInput.value = "";
+        
+        // Show modal
+        passwordModal.style.display = "flex";
+        passwordInput.focus();
+        
+        // Handle form submission
+        const passwordForm = document.getElementById("password-form");
+        if (passwordForm) {
+            passwordForm.onsubmit = (e) => {
+                e.preventDefault();
+                this.handlePasswordSubmit(passwordInput.value);
+            };
+        }
+        
+        // Handle cancel button
+        const passwordCancel = document.getElementById("password-cancel");
+        if (passwordCancel) {
+            passwordCancel.onclick = () => {
+                this.hidePasswordPrompt();
+            };
+        }
+        
+        // Close on overlay click
+        passwordModal.onclick = (e) => {
+            if (e.target === passwordModal) {
+                this.hidePasswordPrompt();
+            }
+        };
+    }
+
+    hidePasswordPrompt() {
+        const passwordModal = document.getElementById("password-modal");
+        if (passwordModal) {
+            passwordModal.style.display = "none";
+        }
+    }
+
+    handlePasswordSubmit(password) {
+        const passwordError = document.getElementById("password-error");
+        
+        if (this.authorize(password)) {
+            // Password correct, hide modal and enable edit mode
+            this.hidePasswordPrompt();
+            this.enableEditMode();
+        } else {
+            // Password incorrect, show error
+            if (passwordError) {
+                passwordError.textContent = "Incorrect password. Please try again.";
+                passwordError.style.display = "block";
+            }
+            // Clear input and refocus
+            const passwordInput = document.getElementById("password-input");
+            if (passwordInput) {
+                passwordInput.value = "";
+                passwordInput.focus();
+            }
+        }
+    }
+
+    // Edit Mode Toggle Methods
+    toggleEditMode() {
+        if (this.isEditMode) {
+            this.disableEditMode();
+        } else {
+            // Check if already authorized (from previous session)
+            if (this.isAuthorized()) {
+                this.enableEditMode();
+            } else {
+                // Show password prompt
+                this.showPasswordPrompt();
+            }
+        }
+    }
+
+    enableEditMode() {
+        // Prevent editing in read-only mode
+        if (this.readOnly) {
+            console.warn('Edit mode is disabled in read-only/embed mode');
+            return;
+        }
+        
+        if (!this.isAuthorized() && this.accessControl.config.password && this.accessControl.config.password !== "") {
+            // Not authorized and password is required
+            this.showPasswordPrompt();
+            return;
+        }
+        
+        this.isEditMode = true;
+        
+        // Load data from localStorage or use current data
+        this.loadDataFromStorage();
+        
+        // Update button text
+        const editBtn = document.getElementById("editTableBtn");
+        if (editBtn) {
+            editBtn.textContent = "Save Changes";
+        }
+        
+        // Show table controls
+        const tableControls = document.getElementById("table-controls");
+        if (tableControls) {
+            tableControls.style.display = "block";
+        }
+        
+        // Show action column header
+        const actionHeader = document.getElementById("action-header");
+        if (actionHeader) {
+            actionHeader.style.display = "table-cell";
+        }
+        
+        // Re-render table in edit mode
+        this.setupTable();
+    }
+
+    disableEditMode() {
+        // Save changes to localStorage
+        this.saveDataToStorage();
+        
+        // Update visualization with new data
+        this.updateVisualization();
+        
+        // Clear authorization
+        this.deauthorize();
+        
+        this.isEditMode = false;
+        this.editableData = null;
+        this.editingRowIndex = null;
+        
+        // Update button text
+        const editBtn = document.getElementById("editTableBtn");
+        if (editBtn) {
+            editBtn.textContent = "Edit Table";
+        }
+        
+        // Hide table controls
+        const tableControls = document.getElementById("table-controls");
+        if (tableControls) {
+            tableControls.style.display = "none";
+        }
+        
+        // Hide action column header
+        const actionHeader = document.getElementById("action-header");
+        if (actionHeader) {
+            actionHeader.style.display = "none";
+        }
+        
+        // Re-render table in view mode
+        this.setupTable();
+    }
+
+    // Storage Methods
+    loadDataFromStorage() {
+        try {
+            const stored = localStorage.getItem('legalSystemData_edits');
+            if (stored) {
+                const parsed = JSON.parse(stored);
+                this.editableData = parsed;
+            } else {
+                // No stored data, use current filtered data or all data
+                const dataSource = this.judicialEntityMapData;
+                this.editableData = JSON.parse(JSON.stringify(dataSource)); // Deep copy
+            }
+        } catch (error) {
+            console.error('Error loading data from storage:', error);
+            // Fallback to current data
+            const dataSource = this.judicialEntityMapData;
+            this.editableData = JSON.parse(JSON.stringify(dataSource)); // Deep copy
+        }
+    }
+
+    saveDataToStorage() {
+        try {
+            if (this.editableData && this.editableData.length > 0) {
+                localStorage.setItem('legalSystemData_edits', JSON.stringify(this.editableData));
+            } else {
+                // Clear storage if no data
+                localStorage.removeItem('legalSystemData_edits');
+            }
+        } catch (error) {
+            console.error('Error saving data to storage:', error);
+        }
+    }
+
+    // Visualization Update Method
+    updateVisualization() {
+        // Merge edited data with original data
+        if (this.editableData && this.editableData.length > 0) {
+            // Update the main data source
+            this.judicialEntityMapData = this.editableData;
+            
+            // Also update window.data for consistency
+            if (window.data) {
+                window.data.judicialEntityMapData = this.editableData;
+            }
+            
+            // If we're in diagram view, rebuild the visualization
+            if (this.currentView === 'diagram') {
+                // Stop current simulation
+                if (this.simulation) {
+                    this.simulation.stop();
+                }
+                
+                // Clear existing elements
+                this.svg.selectAll(".node").remove();
+                this.svg.selectAll(".link").remove();
+                this.svg.selectAll(".arrow-relationship-label").remove();
+                
+                // Rebuild visualization with new data
+                this.prepareDiagramData();
+                
+                // Restart simulation
+                if (this.simulation) {
+                    this.simulation.alpha(1).restart();
+                }
+            }
+        }
+    }
+
+    // Row Management Methods
+    addNewRow() {
+        if (!this.isEditMode || !this.editableData) {
+            return;
+        }
+        
+        // Add new empty row at the beginning
+        const newRow = {
+            source: "",
+            target: "",
+            label: "",
+            count: 1
+        };
+        
+        this.editableData.unshift(newRow);
+        this.setupTable();
+    }
+
+    deleteRow(index) {
+        if (!this.isEditMode || !this.editableData) {
+            return;
+        }
+        
+        if (index >= 0 && index < this.editableData.length) {
+            this.editableData.splice(index, 1);
+            this.setupTable();
+        }
+    }
+
+    saveRowChanges(rowIndex, source, label, target) {
+        if (!this.isEditMode || !this.editableData) {
+            return;
+        }
+        
+        if (rowIndex >= 0 && rowIndex < this.editableData.length) {
+            // Validate data
+            if (window.helpers && window.helpers.validateRowData) {
+                const validation = window.helpers.validateRowData(source, label, target);
+                if (!validation.valid) {
+                    alert(validation.message || "Invalid data");
+                    return;
+                }
+            }
+            
+            // Update row
+            this.editableData[rowIndex].source = source || "";
+            this.editableData[rowIndex].label = label || "";
+            this.editableData[rowIndex].target = target || "";
+            
+            // Auto-save to localStorage
+            this.saveDataToStorage();
+        }
+    }
+
+    openEditModal(rowData, rowIndex) {
+        if (!this.isEditMode) {
+            return;
+        }
+        
+        this.editingRowIndex = rowIndex;
+        
+        const editModal = document.getElementById("edit-modal");
+        const editSource = document.getElementById("edit-source");
+        const editRelationship = document.getElementById("edit-relationship");
+        const editTarget = document.getElementById("edit-target");
+        const editError = document.getElementById("edit-error");
+        
+        if (!editModal || !editSource || !editRelationship || !editTarget) {
+            return;
+        }
+        
+        // Clear error
+        if (editError) {
+            editError.style.display = "none";
+            editError.textContent = "";
+        }
+        
+        // Populate form with row data
+        editSource.value = rowData.source || "";
+        editRelationship.value = rowData.label || "";
+        editTarget.value = rowData.target || "";
+        
+        // Populate datalists with existing values
+        this.populateEditModalDatalists();
+        
+        // Show modal
+        editModal.style.display = "flex";
+        editSource.focus();
+        
+        // Handle form submission
+        const editForm = document.getElementById("edit-form");
+        if (editForm) {
+            editForm.onsubmit = (e) => {
+                e.preventDefault();
+                this.saveModalChanges();
+            };
+        }
+        
+        // Handle cancel button
+        const editCancel = document.getElementById("edit-cancel");
+        if (editCancel) {
+            editCancel.onclick = () => {
+                this.hideEditModal();
+            };
+        }
+        
+        // Close on overlay click
+        editModal.onclick = (e) => {
+            if (e.target === editModal) {
+                this.hideEditModal();
+            }
+        };
+    }
+
+    hideEditModal() {
+        const editModal = document.getElementById("edit-modal");
+        if (editModal) {
+            editModal.style.display = "none";
+        }
+        this.editingRowIndex = null;
+    }
+
+    saveModalChanges() {
+        if (this.editingRowIndex === null || !this.editableData) {
+            return;
+        }
+        
+        const editSource = document.getElementById("edit-source");
+        const editRelationship = document.getElementById("edit-relationship");
+        const editTarget = document.getElementById("edit-target");
+        const editError = document.getElementById("edit-error");
+        
+        if (!editSource || !editRelationship || !editTarget) {
+            return;
+        }
+        
+        const source = editSource.value.trim();
+        const label = editRelationship.value.trim();
+        const target = editTarget.value.trim();
+        
+        // Validate
+        if (window.helpers && window.helpers.validateRowData) {
+            const validation = window.helpers.validateRowData(source, label, target);
+            if (!validation.valid) {
+                if (editError) {
+                    editError.textContent = validation.message || "Invalid data";
+                    editError.style.display = "block";
+                }
+                return;
+            }
+        } else {
+            // Basic validation
+            if (!source || !label || !target) {
+                if (editError) {
+                    editError.textContent = "All fields are required";
+                    editError.style.display = "block";
+                }
+                return;
+            }
+        }
+        
+        // Save changes
+        this.saveRowChanges(this.editingRowIndex, source, label, target);
+        
+        // Hide modal and refresh table
+        this.hideEditModal();
+        this.setupTable();
+    }
+
+    populateEditModalDatalists() {
+        if (!this.editableData) {
+            return;
+        }
+        
+        // Get unique entities
+        const entities = new Set();
+        const relationships = new Set();
+        
+        this.editableData.forEach(d => {
+            if (d.source) entities.add(d.source);
+            if (d.target) entities.add(d.target);
+            if (d.label) relationships.add(d.label);
+        });
+        
+        // Also include original data entities
+        if (this.judicialEntityMapData) {
+            this.judicialEntityMapData.forEach(d => {
+                if (d.source) entities.add(d.source);
+                if (d.target) entities.add(d.target);
+                if (d.label) relationships.add(d.label);
+            });
+        }
+        
+        // Populate source and target datalists
+        const sourceOptions = d3.select("#source-options");
+        const targetOptions = d3.select("#target-options");
+        const relationshipOptions = d3.select("#relationship-options");
+        
+        sourceOptions.selectAll("option").remove();
+        targetOptions.selectAll("option").remove();
+        relationshipOptions.selectAll("option").remove();
+        
+        Array.from(entities).sort().forEach(entity => {
+            sourceOptions.append("option").attr("value", entity);
+            targetOptions.append("option").attr("value", entity);
+        });
+        
+        Array.from(relationships).sort().forEach(rel => {
+            relationshipOptions.append("option").attr("value", rel);
+        });
+    }
+
+    // Export Methods
+    getTableDataForExport() {
+        // Get data - use editableData if in edit mode, otherwise use original data
+        let dataSource;
+        if (this.isEditMode && this.editableData && this.editableData.length > 0) {
+            dataSource = this.editableData;
+        } else {
+            dataSource = this.judicialEntityMapData;
+        }
+        
+        if (!dataSource || !dataSource.length) {
+            // Fallback to window.data
+            dataSource = window.data?.judicialEntityMapData;
+        }
+        
+        if (!dataSource || !dataSource.length) {
+            return [];
+        }
+        
+        // Get filtered data if filter is active (only in view mode)
+        let dataToShow;
+        if (this.isEditMode) {
+            // In edit mode, show all editable data (no filtering)
+            dataToShow = dataSource;
+        } else {
+            // In view mode, apply filters
+            if (window.helpers && window.helpers.getFilteredTableData) {
+                dataToShow = window.helpers.getFilteredTableData(dataSource, this.filteredNodeId, this.filteredEntityGroupId, this.filteredRelationshipId, this.filteredRelationshipGroupId, this.relationshipGroupingData || window.data?.relationshipGroupingData, this.groupingData || window.data?.groupingData);
+            } else {
+                // Fallback filtering
+                dataToShow = dataSource.filter(link => {
+                    const matchesNode = !this.filteredNodeId || 
+                        link.source === this.filteredNodeId || 
+                        link.target === this.filteredNodeId;
+                    const matchesRelationship = !this.filteredRelationshipId || 
+                        link.label === this.filteredRelationshipId;
+                    return matchesNode && matchesRelationship;
+                });
+            }
+        }
+        
+        // Convert to export format: {Entity, Relationship, Target}
+        return dataToShow.map(item => ({
+            Entity: item.source || '',
+            Relationship: item.label || '',
+            Target: item.target || ''
+        }));
+    }
+
+    downloadTableAsExcel() {
+        // Check if SheetJS is available
+        if (typeof XLSX !== 'undefined') {
+            this.downloadTableAsExcelWithSheets();
+        } else {
+            // Fallback to CSV if SheetJS is not available
+            this.downloadTableAsCSV();
+        }
+    }
+
+    downloadTableAsExcelWithSheets() {
+        // Get relationships data
+        const relationshipsData = this.getTableDataForExport();
+        
+        // Get grouping data
+        let groupingData = this.groupingData;
+        if (!groupingData || groupingData.length === 0) {
+            groupingData = window.data?.groupingData || [];
+        }
+        
+        // Get relationship grouping data
+        let relationshipGroupingData = this.relationshipGroupingData;
+        if (!relationshipGroupingData || relationshipGroupingData.length === 0) {
+            relationshipGroupingData = window.data?.relationshipGroupingData || [];
+        }
+        
+        if (!relationshipsData || relationshipsData.length === 0) {
+            alert('No data available to export');
+            return;
+        }
+        
+        // Create a new workbook
+        const wb = XLSX.utils.book_new();
+        
+        // Convert relationships data to worksheet
+        const relationshipsWS = XLSX.utils.json_to_sheet(relationshipsData);
+        XLSX.utils.book_append_sheet(wb, relationshipsWS, 'Relationships');
+        
+        // Convert grouping data to worksheet format
+        if (groupingData && groupingData.length > 0) {
+            const groupingDataFormatted = groupingData.map(item => ({
+                Entity: item.node || '',
+                Label: item.label || '',
+                Group: item.belongsTo || ''
+            }));
+            const groupingWS = XLSX.utils.json_to_sheet(groupingDataFormatted);
+            XLSX.utils.book_append_sheet(wb, groupingWS, 'Entity Groupings');
+        }
+        
+        // Convert relationship grouping data to worksheet format
+        if (relationshipGroupingData && relationshipGroupingData.length > 0) {
+            const relationshipGroupingDataFormatted = relationshipGroupingData.map(item => ({
+                Relationship: item.relationship || '',
+                Group: item.belongsTo || ''
+            }));
+            const relationshipGroupingWS = XLSX.utils.json_to_sheet(relationshipGroupingDataFormatted);
+            XLSX.utils.book_append_sheet(wb, relationshipGroupingWS, 'Relationship Groupings');
+        }
+        
+        // Generate filename with timestamp
+        const filename = window.helpers && window.helpers.formatDateForFilename ? 
+            window.helpers.formatDateForFilename('legal-system-data', 'xlsx') : 
+            `legal-system-data-${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.xlsx`;
+        
+        // Write file
+        XLSX.writeFile(wb, filename);
+    }
+
+    downloadTableAsCSV() {
+        const data = this.getTableDataForExport();
+        
+        if (!data || data.length === 0) {
+            alert('No data available to export');
+            return;
+        }
+        
+        // Use helper function if available, otherwise do it inline
+        if (window.helpers && window.helpers.convertToCSV) {
+            const filename = window.helpers.formatDateForFilename ? 
+                window.helpers.formatDateForFilename('legal-system-data', 'csv') : 
+                `legal-system-data-${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.csv`;
+            window.helpers.convertToCSV(data, filename);
+        } else {
+            // Fallback CSV conversion
+            const headers = ['Entity', 'Relationship', 'Target'];
+            const csvRows = [headers.join(',')];
+            
+            data.forEach(row => {
+                const values = [
+                    this.escapeCSV(row.Entity),
+                    this.escapeCSV(row.Relationship),
+                    this.escapeCSV(row.Target)
+                ];
+                csvRows.push(values.join(','));
+            });
+            
+            const csvContent = csvRows.join('\n');
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            
+            const filename = `legal-system-data-${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.csv`;
+            link.setAttribute('href', url);
+            link.setAttribute('download', filename);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+        }
+    }
+
+    escapeCSV(value) {
+        if (window.helpers && window.helpers.escapeCSVValue) {
+            return window.helpers.escapeCSVValue(value);
+        }
+        // Fallback
+        if (value === null || value === undefined) {
+            return '';
+        }
+        const stringValue = String(value);
+        if (stringValue.includes(',') || stringValue.includes('"') || stringValue.includes('\n')) {
+            return `"${stringValue.replace(/"/g, '""')}"`;
+        }
+        return stringValue;
     }
 
     // Highlighting functions for selected node and connections

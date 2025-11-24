@@ -7,50 +7,106 @@ const groupingData = [
     { node: "Ministry of Law & Justice (DoJ)", label: ":RegulatoryBody", belongsTo: ":LegislativeAndRegulatory" },
     { node: "State Governments", label: ":RegulatoryBody", belongsTo: ":LegislativeAndRegulatory" },
     { node: "Collegium", label: ":JudicialAppointmentBody", belongsTo: ":LegislativeAndRegulatory" },
-    { node: "Supreme Court", label: ":Judiciary", belongsTo: ":JudiciaryGroup" },
-    { node: "High Courts", label: ":Judiciary", belongsTo: ":JudiciaryGroup" },
-    { node: "Subordinate Courts", label: ":Judiciary", belongsTo: ":JudiciaryGroup" },
-    { node: "Appellate Tribunal", label: ":Judiciary", belongsTo: ":JudiciaryGroup" },
-    { node: "Tribunals", label: ":TribunalBody", belongsTo: ":TribunalsAndArbitrationGroup" },
-    { node: "Arbitration Centres", label: ":ArbitrationInstitution", belongsTo: ":TribunalsAndArbitrationGroup" },
-    { node: "Arbitration Council of India", label: ":RegulatoryBody", belongsTo: ":TribunalsAndArbitrationGroup" },
-    { node: "Judicial Officers", label: ":People", belongsTo: ":PeopleAndOfficeholdersGroup" },
-    { node: "Tribunal Members", label: ":People", belongsTo: ":PeopleAndOfficeholdersGroup" },
-    { node: "Tribunal Chairs", label: ":People", belongsTo: ":PeopleAndOfficeholdersGroup" },
-    { node: "Arbitrators", label: ":People", belongsTo: ":PeopleAndOfficeholdersGroup" },
-    { node: "Administrative Staff", label: ":People", belongsTo: ":PeopleAndOfficeholdersGroup" },
-    { node: "Court Procedures", label: ":LegalProcedure", belongsTo: ":LegalFrameworkGroup" },
-    { node: "Tribunal Law and Rules", label: ":LegalProcedure", belongsTo: ":LegalFrameworkGroup" },
-    { node: "Arbitration Act and Rules", label: ":LegalProcedure", belongsTo: ":LegalFrameworkGroup" },
-    { node: "Appointment Procedures", label: ":LegalProcedure", belongsTo: ":LegalFrameworkGroup" },
-    { node: "Oversight Mechanisms", label: ":LegalProcedure", belongsTo: ":LegalFrameworkGroup" },
-    { node: "President of India", label: ":ConstitutionalAuthority", belongsTo: ":NonAdministrativeEntitiesGroup" },
-    { node: "Governor of State", label: ":ConstitutionalAuthority", belongsTo: ":NonAdministrativeEntitiesGroup" },
-    { node: "Council of Ministers", label: ":ConstitutionalAuthority", belongsTo: ":NonAdministrativeEntitiesGroup" },
-    { node: "PM", label: ":ConstitutionalAuthority", belongsTo: ":NonAdministrativeEntitiesGroup" },
-    { node: "Laws governing Tribunals", label: ":LegalProcedure", belongsTo: ":LegalFrameworkGroup" },
-    { node: "Laws governing Arbitration", label: ":LegalProcedure", belongsTo: ":LegalFrameworkGroup" },
+    { node: "Supreme Court", label: ":Judiciary", belongsTo: ":Judiciary" },
+    { node: "High Courts", label: ":Judiciary", belongsTo: ":Judiciary" },
+    { node: "Subordinate Courts", label: ":Judiciary", belongsTo: ":Judiciary" },
+    { node: "Appellate Tribunal", label: ":Judiciary", belongsTo: ":Judiciary" },
+    { node: "Tribunals", label: ":TribunalBody", belongsTo: ":TribunalsAndArbitration" },
+    { node: "Arbitration Centres", label: ":ArbitrationInstitution", belongsTo: ":TribunalsAndArbitration" },
+    { node: "Arbitration Council of India", label: ":RegulatoryBody", belongsTo: ":TribunalsAndArbitration" },
+    { node: "Judicial Officers", label: ":People", belongsTo: ":PeopleAndOfficeholders" },
+    { node: "Tribunal Members", label: ":People", belongsTo: ":PeopleAndOfficeholders" },
+    { node: "Tribunal Chairs", label: ":People", belongsTo: ":PeopleAndOfficeholders" },
+    { node: "Arbitrators", label: ":People", belongsTo: ":PeopleAndOfficeholders" },
+    { node: "Administrative Staff", label: ":People", belongsTo: ":PeopleAndOfficeholders" },
+    { node: "Court Procedures", label: ":LegalProcedure", belongsTo: ":LegalFramework" },
+    { node: "Tribunal Law and Rules", label: ":LegalProcedure", belongsTo: ":LegalFramework" },
+    { node: "Arbitration Act and Rules", label: ":LegalProcedure", belongsTo: ":LegalFramework" },
+    { node: "Appointment Procedures", label: ":LegalProcedure", belongsTo: ":LegalFramework" },
+    { node: "Oversight Mechanisms", label: ":LegalProcedure", belongsTo: ":LegalFramework" },
+    { node: "President of India", label: ":ConstitutionalAuthority", belongsTo: ":NonAdministrativeEntities" },
+    { node: "Governor of State", label: ":ConstitutionalAuthority", belongsTo: ":NonAdministrativeEntities" },
+    { node: "Council of Ministers", label: ":ConstitutionalAuthority", belongsTo: ":NonAdministrativeEntities" },
+    { node: "PM", label: ":ConstitutionalAuthority", belongsTo: ":NonAdministrativeEntities" },
+    { node: "Laws governing Tribunals", label: ":LegalProcedure", belongsTo: ":LegalFramework" },
+    { node: "Laws governing Arbitration", label: ":LegalProcedure", belongsTo: ":LegalFramework" },
     { node: "Sponsoring Ministry", label: ":RegulatoryBody", belongsTo: ":LegislativeAndRegulatory" },
     { node: "National Tribunals Commission", label: ":RegulatoryBody", belongsTo: ":LegislativeAndRegulatory" },
-    { node: "CPC", label: ":LegalProcedure", belongsTo: ":LegalFrameworkGroup" },
-    { node: "CrPC", label: ":LegalProcedure", belongsTo: ":LegalFrameworkGroup" },
-    { node: "District Judges", label: ":People", belongsTo: ":PeopleAndOfficeholdersGroup" },
-    { node: "Subordinate Officers", label: ":People", belongsTo: ":PeopleAndOfficeholdersGroup" },
+    { node: "CPC", label: ":LegalProcedure", belongsTo: ":LegalFramework" },
+    { node: "CrPC", label: ":LegalProcedure", belongsTo: ":LegalFramework" },
+    { node: "District Judges", label: ":People", belongsTo: ":PeopleAndOfficeholders" },
+    { node: "Subordinate Officers", label: ":People", belongsTo: ":PeopleAndOfficeholders" },
     
     // Additional missing nodes from judicialEntityMapData
-    { node: "Supreme Court Judges", label: ":People", belongsTo: ":PeopleAndOfficeholdersGroup" },
-    { node: "High Court Judges", label: ":People", belongsTo: ":PeopleAndOfficeholdersGroup" },
-    { node: "Registry", label: ":AdministrativeBody", belongsTo: ":LegalFrameworkGroup" },
-    { node: "Arbitration Awards", label: ":LegalDocument", belongsTo: ":LegalFrameworkGroup" },
-    { node: "Establishment of Tribunal Oversight Bodies", label: ":AdministrativeBody", belongsTo: ":LegalFrameworkGroup" },
-    { node: "Appellate Tribunals", label: ":TribunalBody", belongsTo: ":TribunalsAndArbitrationGroup" },
-    { node: "Arbitration Proceedings", label: ":LegalProcedure", belongsTo: ":LegalFrameworkGroup" },
+    { node: "Supreme Court Judges", label: ":People", belongsTo: ":PeopleAndOfficeholders" },
+    { node: "High Court Judges", label: ":People", belongsTo: ":PeopleAndOfficeholders" },
+    { node: "Registry", label: ":AdministrativeBody", belongsTo: ":LegalFramework" },
+    { node: "Arbitration Awards", label: ":LegalDocument", belongsTo: ":LegalFramework" },
+    { node: "Establishment of Tribunal Oversight Bodies", label: ":AdministrativeBody", belongsTo: ":LegalFramework" },
+    { node: "Appellate Tribunals", label: ":TribunalBody", belongsTo: ":TribunalsAndArbitration" },
+    { node: "Arbitration Proceedings", label: ":LegalProcedure", belongsTo: ":LegalFramework" },
     { node: "Central Govt (Search Committee)", label: ":RegulatoryBody", belongsTo: ":LegislativeAndRegulatory" },
     { node: "State Legislatures", label: ":LegislativeBody", belongsTo: ":LegislativeAndRegulatory" },
-    { node: "Legislation (Laws, Rules, Procedures)", label: ":LegalDocument", belongsTo: ":LegalFrameworkGroup" },
+    { node: "Legislation (Laws, Rules, Procedures)", label: ":LegalDocument", belongsTo: ":LegalFramework" },
     
     // Additional nodes from new relationships
-    { node: "Search-cum-Selection Committee", label: ":AdministrativeBody", belongsTo: ":LegalFrameworkGroup" }
+    { node: "Search-cum-Selection Committee", label: ":AdministrativeBody", belongsTo: ":LegalFramework" }
+];
+
+// Relationship grouping data - maps relationship labels to simple group names
+const relationshipGroupingData = [
+    // Funding relationships
+    { relationship: "funds", belongsTo: "Funding" },
+    { relationship: "allocates_funds", belongsTo: "Funding" },
+    
+    // Oversights relationships
+    { relationship: "oversees", belongsTo: "Oversights" },
+    { relationship: "supervises", belongsTo: "Oversights" },
+    { relationship: "superintends", belongsTo: "Oversights" },
+    { relationship: "controls", belongsTo: "Oversights" },
+    { relationship: "reviews", belongsTo: "Oversights" },
+    { relationship: "oversight_by", belongsTo: "Oversights" },
+    
+    // Appointments relationships
+    { relationship: "appoints", belongsTo: "Appointments" },
+    { relationship: "appoints_members", belongsTo: "Appointments" },
+    { relationship: "processes_appointments", belongsTo: "Appointments" },
+    { relationship: "recommends_appointments", belongsTo: "Appointments" },
+    { relationship: "formal_appointment_authority_for", belongsTo: "Appointments" },
+    { relationship: "appointed_by", belongsTo: "Appointments" },
+    
+    // Governance relationships
+    { relationship: "governs", belongsTo: "Governance" },
+    { relationship: "governed_by", belongsTo: "Governance" },
+    { relationship: "frames_rules", belongsTo: "Governance" },
+    { relationship: "self_governs", belongsTo: "Governance" },
+    { relationship: "self_regulates", belongsTo: "Governance" },
+    { relationship: "regulate", belongsTo: "Governance" },
+    { relationship: "regulated_by", belongsTo: "Governance" },
+    
+    // Accountability relationships
+    { relationship: "accountable_to", belongsTo: "Accountability" },
+    { relationship: "reports_to", belongsTo: "Accountability" },
+    { relationship: "advises", belongsTo: "Accountability" },
+    { relationship: "acts_on_advice_of", belongsTo: "Accountability" },
+    
+    // Establishment relationships
+    { relationship: "establishes", belongsTo: "Establishment" },
+    { relationship: "enacts/amends", belongsTo: "Establishment" },
+    
+    // Operations relationships
+    { relationship: "adjudicates", belongsTo: "Operations" },
+    { relationship: "administer(s)", belongsTo: "Operations" },
+    { relationship: "coordinates_with", belongsTo: "Operations" },
+    
+    // Hierarchy relationships
+    { relationship: "belongs_to", belongsTo: "Hierarchy" },
+    { relationship: "members_of", belongsTo: "Hierarchy" },
+    { relationship: "head_of", belongsTo: "Hierarchy" },
+    { relationship: "appellate_to", belongsTo: "Hierarchy" },
+    
+    // Directives relationships
+    { relationship: "directs/mandates", belongsTo: "Directives" }
 ];
 
 const judicialEntityMapData = [
@@ -71,7 +127,7 @@ const judicialEntityMapData = [
     { source: "Ministry of Law & Justice (DoJ)", target: "Arbitration Centres", count: 1, label: "allocates_funds" },
     { source: "Ministry of Law & Justice (DoJ)", target: "Supreme Court Judges", count: 1, label: "processes_appointments" },
     { source: "Ministry of Law & Justice (DoJ)", target: "High Court Judges", count: 1, label: "processes_appointments" },
-    { source: "Ministry of Law & Justice (DoJ)", target: "Arbitration Council of India", count: 1, label: "administers" },
+    { source: "Ministry of Law & Justice (DoJ)", target: "Arbitration Council of India", count: 1, label: "administer(s)" },
     { source: "Ministry of Law & Justice (DoJ)", target: "State Governments", count: 1, label: "coordinates_with" },
     
     // Supreme Court relationships
@@ -123,7 +179,7 @@ const judicialEntityMapData = [
     { source: "Tribunals", target: "Appellate Tribunals", count: 1, label: "appellate_to" },
     
     // Arbitration Centres relationships
-    { source: "Arbitration Centres", target: "Arbitration Proceedings", count: 1, label: "administer" },
+    { source: "Arbitration Centres", target: "Arbitration Proceedings", count: 1, label: "administer(s)" },
     { source: "Arbitration Centres", target: "Ministry of Law & Justice (DoJ)", count: 1, label: "accountable_to" },
     { source: "Arbitration Centres", target: "Arbitration Council of India", count: 1, label: "accountable_to" },
     
@@ -132,7 +188,7 @@ const judicialEntityMapData = [
     { source: "Arbitration Council of India", target: "Arbitrators", count: 1, label: "regulate" },
     
     // Judicial Officers relationships
-    { source: "Judicial Officers", target: "Subordinate Courts", count: 1, label: "administer" },
+    { source: "Judicial Officers", target: "Subordinate Courts", count: 1, label: "administer(s)" },
     { source: "Judicial Officers", target: "High Courts", count: 1, label: "regulated_by" },
     { source: "Judicial Officers", target: "CPC", count: 1, label: "regulated_by" },
     { source: "Judicial Officers", target: "CrPC", count: 1, label: "regulated_by" },
@@ -197,7 +253,7 @@ const judicialEntityMapData = [
 // Configuration
 const config = {
     width: 1400,
-    height: 900,
+    height: 650,
     nodeRadius: 4,
     linkDistance: 200,  // Balanced distance for circular layout
     chargeStrength: -600,  // Moderate repulsion for better circular distribution
@@ -212,13 +268,22 @@ const colorMap = {
     "incoming": "#d62728"   // Red for incoming relationships
 };
 
+// Access control configuration
+const accessControlConfig = {
+    password: "d3lem_2025",  // Password/PIN for edit access (empty string to disable, set to enable)
+    ipWhitelist: [],  // Array of allowed IP addresses (for future use)
+    enableIPCheck: false  // Boolean flag to enable IP checking (false for now)
+};
+
 // Export data for use in other modules
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
         judicialEntityMapData,
         groupingData,
+        relationshipGroupingData,
         config,
-        colorMap
+        colorMap,
+        accessControlConfig
     };
 }
 
@@ -226,6 +291,8 @@ if (typeof module !== 'undefined' && module.exports) {
 window.data = {
     judicialEntityMapData,
     groupingData,
+    relationshipGroupingData,
     config,
-    colorMap
+    colorMap,
+    accessControlConfig
 };

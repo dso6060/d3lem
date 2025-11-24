@@ -10,20 +10,81 @@
  */
 
 /**
- * Get filtered table data based on current node filter
+ * Get filtered table data based on node and/or relationship filter
  * @param {Array} judicialEntityMapData - Array of relationship data
  * @param {string|null} filteredNodeId - ID of the node to filter by
+ * @param {string|null} filteredEntityGroupId - ID of the entity group to filter by
+ * @param {string|null} filteredRelationshipId - ID of the relationship to filter by
+ * @param {string|null} filteredRelationshipGroupId - ID of the relationship group to filter by
+ * @param {Array} relationshipGroupingData - Array of relationship grouping data
+ * @param {Array} groupingData - Array of entity grouping data
  * @returns {Array} Filtered relationship data
  */
-function getFilteredTableData(judicialEntityMapData, filteredNodeId) {
-    if (!filteredNodeId) {
+function getFilteredTableData(judicialEntityMapData, filteredNodeId, filteredEntityGroupId, filteredRelationshipId, filteredRelationshipGroupId, relationshipGroupingData, groupingData) {
+    // If no filters, return all data
+    if (!filteredNodeId && !filteredEntityGroupId && !filteredRelationshipId && !filteredRelationshipGroupId) {
         return judicialEntityMapData;
     }
     
-    // Return only relationships involving the filtered node
-    return judicialEntityMapData.filter(link => 
-        link.source === filteredNodeId || link.target === filteredNodeId
-    );
+    // Create a map of relationships to groups for quick lookup
+    // Normalize keys by trimming to handle any whitespace issues
+    const relationshipToGroupMap = {};
+    if (relationshipGroupingData && relationshipGroupingData.length > 0) {
+        relationshipGroupingData.forEach(item => {
+            const normalizedKey = item.relationship ? item.relationship.trim() : '';
+            if (normalizedKey) {
+                relationshipToGroupMap[normalizedKey] = item.belongsTo;
+            }
+        });
+    }
+    
+    
+    // Create a map of entities to groups for quick lookup
+    const entityToGroupMap = {};
+    if (groupingData && groupingData.length > 0) {
+        groupingData.forEach(item => {
+            entityToGroupMap[item.node] = item.belongsTo;
+        });
+    }
+    
+    // Get entities in filtered entity group
+    const entitiesInGroup = new Set();
+    if (filteredEntityGroupId && groupingData) {
+        groupingData.forEach(item => {
+            if (item.belongsTo === filteredEntityGroupId) {
+                entitiesInGroup.add(item.node);
+            }
+        });
+    }
+    
+    // Return only relationships matching the filters
+    const filtered = judicialEntityMapData.filter(link => {
+        const matchesNode = !filteredNodeId || 
+            link.source === filteredNodeId || 
+            link.target === filteredNodeId;
+        
+        // Check entity group filter
+        const matchesEntityGroup = !filteredEntityGroupId || 
+            entitiesInGroup.has(link.source) || 
+            entitiesInGroup.has(link.target);
+        
+        // Trim both values for comparison to handle any whitespace issues
+        const linkLabel = link.label ? link.label.trim() : '';
+        const filterLabel = filteredRelationshipId ? filteredRelationshipId.trim() : '';
+        const matchesRelationship = !filteredRelationshipId || 
+            linkLabel === filterLabel;
+        
+        // Check relationship group filter
+        // Normalize the filteredRelationshipGroupId for comparison
+        const normalizedGroupId = filteredRelationshipGroupId ? filteredRelationshipGroupId.trim() : null;
+        const linkGroup = relationshipToGroupMap[linkLabel];
+        const matchesRelationshipGroup = !normalizedGroupId || 
+            linkGroup === normalizedGroupId;
+        
+        return matchesNode && matchesEntityGroup && matchesRelationship && matchesRelationshipGroup;
+    });
+    
+    return filtered;
 }
 
 // Create unique entities/nodes from judicial entity map data
@@ -186,11 +247,152 @@ if (typeof module !== 'undefined' && module.exports) {
     };
 }
 
+/**
+ * Validate row data before saving
+ * @param {string} source - Source entity
+ * @param {string} label - Relationship label
+ * @param {string} target - Target entity
+ * @returns {Object} Validation result with valid boolean and message
+ */
+function validateRowData(source, label, target) {
+    if (!source || !source.trim()) {
+        return { valid: false, message: "Source entity is required" };
+    }
+    if (!label || !label.trim()) {
+        return { valid: false, message: "Relationship is required" };
+    }
+    if (!target || !target.trim()) {
+        return { valid: false, message: "Target entity is required" };
+    }
+    return { valid: true, message: "" };
+}
+
+/**
+ * Get unique entities from data
+ * @param {Array} data - Array of relationship data
+ * @returns {Array} Array of unique entity names
+ */
+function getUniqueEntities(data) {
+    const entities = new Set();
+    if (data && Array.isArray(data)) {
+        data.forEach(d => {
+            if (d.source) entities.add(d.source);
+            if (d.target) entities.add(d.target);
+        });
+    }
+    return Array.from(entities).sort();
+}
+
+/**
+ * Get unique relationships from data
+ * @param {Array} data - Array of relationship data
+ * @returns {Array} Array of unique relationship labels
+ */
+function getUniqueRelationships(data) {
+    const relationships = new Set();
+    if (data && Array.isArray(data)) {
+        data.forEach(d => {
+            if (d.label) relationships.add(d.label);
+        });
+    }
+    return Array.from(relationships).sort();
+}
+
+/**
+ * Get client IP address (placeholder for future implementation)
+ * @returns {string|null} Client IP address or null
+ */
+function getClientIP() {
+    // Placeholder for future IP detection
+    // Would require backend service or API call
+    return null;
+}
+
+/**
+ * Format date for filename
+ * @param {string} prefix - Filename prefix
+ * @param {string} extension - File extension (without dot)
+ * @returns {string} Formatted filename with timestamp
+ */
+function formatDateForFilename(prefix, extension) {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    const seconds = String(now.getSeconds()).padStart(2, '0');
+    const timestamp = `${year}-${month}-${day}-${hours}${minutes}${seconds}`;
+    return `${prefix}-${timestamp}.${extension}`;
+}
+
+/**
+ * Convert data array to CSV and trigger download
+ * @param {Array} data - Array of objects to convert
+ * @param {string} filename - Filename for download
+ */
+function convertToCSV(data, filename) {
+    if (!data || data.length === 0) {
+        console.error('No data to convert to CSV');
+        return;
+    }
+    
+    // Get headers from first object
+    const headers = Object.keys(data[0]);
+    const csvRows = [headers.join(',')];
+    
+    // Convert each row to CSV
+    data.forEach(row => {
+        const values = headers.map(header => {
+            const value = row[header];
+            return escapeCSVValue(value);
+        });
+        csvRows.push(values.join(','));
+    });
+    
+    const csvContent = csvRows.join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    
+    link.setAttribute('href', url);
+    link.setAttribute('download', filename);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+}
+
+/**
+ * Escape CSV value (handles commas, quotes, newlines)
+ * @param {*} value - Value to escape
+ * @returns {string} Escaped CSV value
+ */
+function escapeCSVValue(value) {
+    if (value === null || value === undefined) {
+        return '';
+    }
+    const stringValue = String(value);
+    // If value contains comma, quote, or newline, wrap in quotes and escape quotes
+    if (stringValue.includes(',') || stringValue.includes('"') || stringValue.includes('\n')) {
+        return `"${stringValue.replace(/"/g, '""')}"`;
+    }
+    return stringValue;
+}
+
 // Make helper functions available globally for browser usage
 window.helpers = {
     getFilteredTableData,
     createUniqueNodes,
     createDiagramLinks,
     calculateCollisionScore,
-    calculateTotalOverlap
+    calculateTotalOverlap,
+    validateRowData,
+    getUniqueEntities,
+    getUniqueRelationships,
+    getClientIP,
+    formatDateForFilename,
+    convertToCSV,
+    escapeCSVValue
 };

@@ -16,17 +16,18 @@ let isInitialized = false;
 function init() {
     try {
         // Get data from window.data at runtime
-        const { judicialEntityMapData, groupingData, config, colorMap } = window.data || {};
+        const { judicialEntityMapData, groupingData, relationshipGroupingData, config, colorMap } = window.data || {};
         
         // Validate required data is available
         if (!judicialEntityMapData || !groupingData || !config || !colorMap) {
             throw new Error('Required data not loaded. Make sure data.js is included.');
         }
 
-        // Create visualization instance
+        // Create visualization instance (relationshipGroupingData is optional)
         visualization = new LegalSystemVisualization({
             judicialEntityMapData,
             groupingData,
+            relationshipGroupingData: relationshipGroupingData || [],
             config,
             colorMap
         });
@@ -74,10 +75,10 @@ function setupTable() {
     tableBody.selectAll("tr").remove();
     
     // Get data from window.data at runtime
-    const { lawsuitData } = window.data || {};
+    const { judicialEntityMapData } = window.data || {};
     
     // Get filtered data if filter is active
-    const dataToShow = window.utils?.getFilteredTableData(lawsuitData, visualization?.filteredNodeId) || lawsuitData;
+    const dataToShow = window.helpers?.getFilteredTableData(judicialEntityMapData, visualization?.filteredNodeId, visualization?.filteredEntityGroupId, visualization?.filteredRelationshipId, visualization?.filteredRelationshipGroupId, window.data?.relationshipGroupingData, window.data?.groupingData) || judicialEntityMapData;
     
     // Create rows for each lawsuit
     const rows = tableBody.selectAll("tr")
@@ -104,6 +105,39 @@ function setupEventListeners() {
     document.getElementById("toggleViewBtn").addEventListener("click", toggleView);
     document.getElementById("nodeFilter").addEventListener("change", handleNodeFilter);
     document.getElementById("clearFilter").addEventListener("click", clearNodeFilter);
+    
+    // Setup collapsible project note toggle
+    const projectNoteToggle = document.getElementById("projectNoteToggle");
+    if (projectNoteToggle) {
+        projectNoteToggle.addEventListener("click", toggleProjectNote);
+    }
+}
+
+// Toggle project note visibility
+function toggleProjectNote() {
+    const toggle = document.getElementById("projectNoteToggle");
+    const content = document.getElementById("projectNoteContent");
+    const diagramView = document.getElementById("diagram-view");
+    
+    if (!toggle || !content) return;
+    
+    const isExpanded = toggle.getAttribute("aria-expanded") === "true";
+    
+    if (isExpanded) {
+        toggle.setAttribute("aria-expanded", "false");
+        content.classList.add("collapsed");
+        // Add class to diagram-view to move legend down (if diagram view exists)
+        if (diagramView) {
+            diagramView.classList.add("project-note-collapsed");
+        }
+    } else {
+        toggle.setAttribute("aria-expanded", "true");
+        content.classList.remove("collapsed");
+        // Remove class to move legend back up (if diagram view exists)
+        if (diagramView) {
+            diagramView.classList.remove("project-note-collapsed");
+        }
+    }
 }
 
 // Toggle between diagram and table views
@@ -128,6 +162,12 @@ function showTableView() {
     
     const tableView = document.getElementById("table-view");
     const diagramView = document.getElementById("diagram-view");
+    const container = document.querySelector('.container');
+    
+    // Add class to hide legend and project note
+    if (container) {
+        container.classList.add('table-view-active');
+    }
     
     // Stop simulation
     visualization?.simulation?.stop();
@@ -166,12 +206,12 @@ function setupFilterDropdown() {
     const nodeFilter = document.getElementById("nodeFilter");
     
     // Get data from window.data at runtime
-    const { lawsuitData } = window.data || {};
+    const { judicialEntityMapData } = window.data || {};
     
     // Get unique node names
     const uniqueNodes = [...new Set([
-        ...lawsuitData.map(d => d.source),
-        ...lawsuitData.map(d => d.target)
+        ...judicialEntityMapData.map(d => d.source),
+        ...judicialEntityMapData.map(d => d.target)
     ])].sort();
     
     // Clear existing options
@@ -202,12 +242,12 @@ function applyNodeFilter(nodeId) {
     visualization.filteredNodeId = nodeId;
     
     // Get data from window.data at runtime
-    const { lawsuitData } = window.data || {};
+    const { judicialEntityMapData } = window.data || {};
     
     // Filter nodes
     visualization?.nodeElements
         ?.style("opacity", d => {
-            const isConnected = lawsuitData.some(link => 
+            const isConnected = judicialEntityMapData.some(link => 
                 (link.source === nodeId && link.target === d.id) ||
                 (link.target === nodeId && link.source === d.id)
             );
@@ -250,10 +290,44 @@ function clearNodeFilter() {
     setupTable();
 }
 
+// Orientation detection and lock
+function checkOrientation() {
+    const isPortrait = window.innerHeight > window.innerWidth;
+    const body = document.body;
+    
+    if (isPortrait) {
+        body.classList.add('portrait-mode');
+        // Prevent scrolling in portrait mode
+        body.style.overflow = 'hidden';
+    } else {
+        body.classList.remove('portrait-mode');
+        body.style.overflow = '';
+    }
+}
+
 // Initialize when DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
+    // Check initial orientation
+    checkOrientation();
+    
+    // Listen for orientation changes
+    window.addEventListener('resize', checkOrientation);
+    window.addEventListener('orientationchange', function() {
+        // Delay check to allow orientation change to complete
+        setTimeout(checkOrientation, 100);
+    });
+    
     // Initialize the application
     init();
+    // Setup event listeners
+    setupEventListeners();
+    
+    // Set initial state for collapsed project note (legend position)
+    const diagramView = document.getElementById("diagram-view");
+    const projectNoteContent = document.getElementById("projectNoteContent");
+    if (diagramView && projectNoteContent && projectNoteContent.classList.contains("collapsed")) {
+        diagramView.classList.add("project-note-collapsed");
+    }
 });
 
 /**
