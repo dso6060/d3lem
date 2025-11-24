@@ -1,158 +1,115 @@
-# Comprehensive Legal System - Interactive Network Diagram
+# D3.js Legal Entity Map
 
-A modular D3.js visualization of the Indian legal system showing relationships between Parliament, Courts, Tribunals, Arbitration Centers, and Legal Professionals.
+An interactive D3.js force-directed network that visualizes how India’s constitutional actors, courts, tribunals, professional bodies, and citizens connect through appointments, funding, oversight, and operational relationships. This repository powers the **d3lem** experience shown in `index.html`.
 
-## Architecture
+---
 
-The codebase has been refactored into a clean separation of concerns:
+1. Clone or download the repository.
+2. Open `index.html` in any modern desktop browser (Chrome, Edge, Firefox, Safari).
+3. Use the on-page controls:
+   - **Drag nodes** to isolate clusters—only directly connected nodes move with the one you drag.
+   - **Hover** to highlight a node’s inbound/outbound connections plus tooltip labels.
+   - **Filter** by entity, relationship type, or entity/relationship group to reduce clutter.
+   - **Toggle views** (arrow map ↔ table) with the “Show Table View” button.
+   - **Edit/Export**: unlock edits with the password prompt (see `data.js` → `accessControlConfig`) and download the current data to Excel from the table view.
 
-### 📁 File Structure
+---
 
-```
-d3lem/
-├── index.html          # Main HTML structure
-├── style.css           # All styling and CSS
-├── data.js             # Data layer - all data and configuration
-├── helpers.js          # Helper functions and utilities
-├── network-diagram.js  # Logic layer - D3.js visualization logic
-├── main.js             # Application layer - orchestration and entry point
-└── README.md           # This documentation
-```
+## Repository map
 
-### 🏗️ Layer Separation
+| File | Purpose |
+| --- | --- |
+| `index.html` | Application shell, instructions card, modal containers, and script includes |
+| `style.css` | All scoped styles for the visualization, table view, modals, filters, and footer |
+| `data.js` | Data source: `groupingData`, `relationshipGroupingData`, `judicialEntityMapData`, and visualization `config`/`accessControlConfig` |
+| `helpers.js` | Utility functions shared by the visualization (dedupe nodes, link generation, label helpers) |
+| `network-diagram.js` | Core D3 logic (`LegalSystemVisualization` class) covering simulations, forces, link paths, label optimization, grouping, and edit hooks |
+| `main.js` | Bootstraps the experience, wires DOM controls to visualization methods, handles filters, view switching, orientation guard, and password gating |
+| `embed.js` / `embed.html` | Lightweight embed script and demo markup |
 
-#### **Data Layer (`data.js`)**
-- Contains all legal system relationship data (`judicialEntityMapData`)
-- Configuration settings (dimensions, forces, etc.)
-- Color mapping for arrow markers
-- Pure data with no logic
+---
 
-#### **Logic Layer (`network-diagram.js`)**
-- Core D3.js visualization functionality
-- Force simulation management
-- Node and link creation/updates
-- Drag and interaction behaviors
-- Encapsulated in `LegalSystemVisualization` class
+## Interaction guide
 
-#### **Helper Layer (`helpers.js`)**
-- Helper functions for data processing
-- Label positioning algorithms
-- Collision detection utilities
-- Reusable functions across the application
+- **Diagram view** (default): force-directed layout constrained to an ellipse for readability. Nodes interpolate to valid positions before the simulation starts, then continue to settle while remaining draggable.
+- **Hover highlight**: outlines the focused node, fades unrelated nodes/links, and displays relationship labels along the relevant arrows.
+- **Filter toolkit**:
+  - *Entity filter*: isolates a single actor and its direct edges.
+  - *Relationship filter*: shows only relationships that match a label (e.g., “appoints”, “funds”).
+  - *Group filter*: switch between entity clusters (Judiciary, Legislative & Regulatory, etc.) or relationship groupings (Funding, Oversights, Appointments, Governance, Accountability, Establishment, Operations, Hierarchy, Directives).
+- **Table view**: presents the same dataset in tabular form for quick scanning, editing, or export. The table honors active filters.
+- **Editing workflow** (optional): click **Edit Table**, enter the access password defined in `data.js`, and use the inline controls to modify relationships. Changes stay in memory until saved/exported.
 
-#### **Application Layer (`main.js`)**
-- Main entry point and orchestration
-- Event handling and user interactions
-- View switching logic
-- Filtering functionality
-- Coordinates between all layers
+---
 
-#### **Presentation Layer (`style.css`)**
-- All visual styling
-- Responsive design
-- Animation definitions
-- Color schemes and typography
+## Color reference (current palette)
 
-## 🎯 Key Features
+### Entity groups (`network-diagram.js → this.groupColors`)
 
-### **Two-Color Arrow System**
-- **Blue arrows**: Outgoing relationships (entity acts on target)
-- **Red arrows**: Incoming relationships (entity receives action)
-- Clear directional flow for easy understanding
+| Group key | Description | Hex |
+| --- | --- | --- |
+| `:LegislativeAndRegulatory` | Parliament, ministries, commissions | `#2E8B57` (Sea Green) |
+| `:Judiciary` | Courts, judges, registries | `#4169E1` (Royal Blue) |
+| `:TribunalsAndArbitration` | Tribunals, arbitration ecosystem | `#FF6347` (Tomato) |
+| `:PeopleAndOfficeholders` | Staff, legal professionals, citizens | `#9370DB` (Medium Purple) |
+| `:NonAdministrativeEntities` | Appointment bodies, oversight boards | `#DAA520` (Goldenrod) |
 
-### **Interactive Features**
-- **Drag isolation**: Only related nodes move when dragging
-- **Hover effects**: Highlight related entities and relationships
-- **Filtering system**: Focus on specific entities
-- **Toggle views**: Switch between diagram and table views
-- **Collision avoidance**: No overlapping labels
+Each node inherits its ring color from this mapping. Links default to the source entity’s group color unless a relationship group override applies.
 
-### **Responsive Design**
-- **Desktop**: 1400x900px optimal viewing
-- **Tablet**: 1000x700px adapted layout
-- **Mobile**: 600px height with full width
+### Relationship groups (`network-diagram.js → this.relationshipGroupColors`)
 
-## 🚀 Usage
+`Funding #4CAF50`, `Oversights #FF9800`, `Appointments #2196F3`, `Governance #9C27B0`, `Accountability #F44336`, `Establishment #00BCD4`, `Operations #FFC107`, `Hierarchy #795548`, `Directives #E91E63`.
 
-1. **Open `index.html`** in a web browser
-2. **Explore the diagram** by dragging nodes and hovering over relationships
-3. **Filter entities** using the dropdown to focus on specific relationships
-4. **Switch to table view** to see data in tabular format
-5. **Use the legend** to understand the color coding
+When a relationship label appears in `relationshipGroupingData`, its arrow uses the palette above, enabling quick scanning of the dominant action type.
 
-## 🔧 Technical Details
+### Direction hints
 
-### **Dependencies**
-- D3.js v7 for visualization
-- Modern browser with ES6+ support
+Arrowheads still communicate flow from source → target, but color is now semantic (group/action) rather than the previous “blue = outgoing / red = incoming” system, so any documentation or UI copy should refer to the palettes above.
 
-### **Performance**
-- Optimized force simulation
-- Efficient collision detection
-- Throttled label positioning updates
-- Responsive rendering
+---
 
-### **Browser Support**
-- Chrome 60+
-- Firefox 55+
-- Safari 12+
-- Edge 79+
+## Data & configuration
 
-## 📊 Data Structure
+- `groupingData`: per-entity metadata (`node`, `label`, `belongsTo` keys) used for node coloring and legend building.
+- `relationshipGroupingData`: maps relationship labels (e.g., “appoints”, “funds”) to the high-level groupings listed earlier.
+- `judicialEntityMapData`: the primary edge list. Each object includes `source`, `target`, `label`, `count`, and optional `isProcessFlow` flag for dotted connectors.
+- `config`: width/height, node radius, force settings, and overall simulation behavior.
+- `colorMap`: retained for backwards compatibility (used when exporting simple data-only bundles) but arrows in the UI now derive their colors from `groupColors` / `relationshipGroupColors`.
+- `accessControlConfig`: password + IP whitelist toggle for enabling edit mode on shared deployments.
 
-The legal system data includes 132 relationships across:
-- **Government entities**: Parliament, Ministry of Law & Justice
-- **Judicial system**: Supreme Court, High Courts, Subordinate Courts
-- **Specialized bodies**: Tribunals, Arbitration Centers
-- **Legal professionals**: Advocates, Bar Councils
-- **Citizens and stakeholders**: Litigants, NGOs, Parties
+To add/modify nodes or relationships, update `data.js` and reload the page. No build step is required.
 
-## 🎨 Customization
+---
 
-### **Adding New Relationships**
-Edit `data.js` to add new relationship entries to the `judicialEntityMapData` array:
-```javascript
-{ source: "Source Entity", target: "Target Entity", count: 1, color: "outgoing", label: "relationship_type" }
-```
+## Limitations & future extensions
 
-### **Modifying Colors**
-Update the `colorMap` in `data.js`:
-```javascript
-const colorMap = {
-    "outgoing": "#your_blue_color",
-    "incoming": "#your_red_color"
-};
-```
+### Subordinate courts aggregation
+“Subordinate Court” appears as a single aggregate node. India’s district and taluka courts span thousands of institutions; rendering each court individually would overwhelm the force layout and degrade readability. A dedicated visualization with drill-down capability and geographic/contextual layers is recommended for that hierarchy.
 
-### **Adjusting Layout**
-Modify `config` in `data.js`:
-```javascript
-const config = {
-    width: 1400,        // Canvas width
-    height: 900,        // Canvas height
-    nodeRadius: 25,     // Node size
-    linkDistance: 180,  // Link length
-    // ... other settings
-};
-```
+### Known trade-offs
+- Large additions to `judicialEntityMapData` may require tuning `config.chargeStrength`, `linkDistance`, or the ellipse bounds in `network-diagram.js → ticked()` to maintain spacing.
+- Edit mode currently operates in-memory; persist changes by exporting to Excel and re-generating `data.js` (or piping the edited JSON into your preferred backend).
 
-## 🐛 Troubleshooting
+---
 
-### **Arrows Not Showing**
-- Check browser console for JavaScript errors
-- Ensure all script files are loaded in correct order
-- Verify D3.js is loaded before other scripts
+## Customization tips
 
-### **Performance Issues**
-- Reduce `linkDistance` in config for tighter layout
-- Decrease number of nodes if adding many relationships
-- Check for browser memory usage with large datasets
+1. **Layout**: tweak `config` in `data.js` (width, height, forces) to suit different canvases or host pages.
+2. **Color system**: adjust `this.groupColors` / `this.relationshipGroupColors` inside `network-diagram.js` to align with your branding, then update the legend styles in `style.css`.
+3. **Embedding**: use `embed.js` with the provided example in `embed.html` to drop the visualization into other sites while honoring read-only mode.
+4. **Data regeneration**: run `convert_excel_to_data.py` if you need to regenerate `data.js` from the original Excel workbook. Pandas + openpyxl are auto-installed by the script.
 
-### **Layout Problems**
-- Adjust `chargeStrength` for node repulsion
-- Modify `centerStrength` for cluster positioning
-- Update `maxDistance` in ticked function for boundary control
+---
 
-## 📝 License
+## Tech stack
 
-This project is open source and available under the MIT License.
+- **D3.js v7** for force simulation, interaction handling, SVG rendering.
+- **Vanilla JavaScript** modules for application orchestration and table tooling.
+- **SheetJS (xlsx)** for client-side Excel export from the table view.
+- No external build tooling; everything runs directly in the browser.
+
+---
+
+## License
+
+MIT License. See `LICENSE` for the full text.

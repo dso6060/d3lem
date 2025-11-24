@@ -101,7 +101,8 @@ function createUniqueNodes(judicialEntityMapData, groupingData) {
             id: name, 
             name: name,
             belongsTo: groupInfo ? groupInfo.belongsTo : "Unknown",
-            label: groupInfo ? groupInfo.label : name
+            label: groupInfo ? groupInfo.label : name,
+            isProcessFlowEntity: groupInfo ? (groupInfo.isProcessFlowEntity || false) : false
         };
     });
 }
@@ -133,7 +134,8 @@ function createDiagramLinks(judicialEntityMapData, entities) {
             source: sourceNode,
             target: targetNode,
             count: d.count,
-            label: d.label
+            label: d.label,
+            isProcessFlow: d.isProcessFlow || false
         };
         
         // Assign loop index for self-loops

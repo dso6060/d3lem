@@ -7,7 +7,7 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>D3 rendered Legal Entity Map</title>
+    <title>D3.js Legal Entity Map</title>
     <link rel="stylesheet" href="style.css">
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
@@ -15,9 +15,17 @@
 <body>
     <div class="d3lem-app">
         <div class="container">
-        <h1>D3 rendered Legal Entity Map</h1>
+        <h1>D3.js Legal Entity Map</h1>
         <p class="subtitle">d3lem</p>
-        <p class="description">Explore the complex relationships between Parliament, Courts, Tribunals, Arbitration Centers, and Legal Professionals in the Indian legal ecosystem.</p>
+        <p class="description">Explore the Indian Legal Ecosystem</p>
+        
+        <section class="instructions-card" aria-label="How to explore this visualization">
+            <ul>
+                <li><strong>Explore:</strong> Drag nodes to reposition clusters; hover to highlight connections. Link colors reflect entity groups or relationship types.</li>
+                <li><strong>Focus:</strong> Use filters (Entity, Relationship, Group) to isolate specific connections, or switch to Table View for detailed data.</li>
+            </ul>
+            <p class="limitation-note"><strong>Note:</strong> Subordinate Courts are shown as a single aggregated node; their complex framework requires more detailed treatment beyond this version's scope.</p>
+        </section>
         
         <div class="controls">
             <button id="toggleViewBtn">Show Table View</button>
@@ -110,12 +118,11 @@
             <div class="project-note">
                 <button class="project-note-toggle" id="projectNoteToggle" aria-expanded="false">
                     <span class="toggle-icon">▶</span>
-                    <strong>About This Project:</strong>
+                    <strong>About d3lem:</strong>
                 </button>
                 <div class="project-note-content collapsed" id="projectNoteContent">
-                    <p>This Indian Legal Entity Map began as a project to better understand the Indian Judicial System and its structural framework. The initiative emerged from a need to understand the various entities and bodies that influence the functioning of the independent judiciary, including the funding structure, the selection and appointment processes at both central and state levels, and the checks and balances of systems built to enable the Judiciary to act as the custodian and guardian of the Constitution, ensuring that all laws and government actions conform to constitutional principles, interpreting the Constitution, protecting fundamental rights, and exercising judicial review to invalidate any laws or executive acts that violate constitutional provisions; thus, maintaining constitutional supremacy, as a check on the legislature and executive, and safeguarding the rule of law and democratic governance.</p>
-                    <p>This project was initiated following extensive experience managing over 50 cases in India for a financial institution, which raised questions about the efficiency of the justice delivery system. It was also developed after participating in programs that examined the gap between reform initiatives and ground realities. The analysis suggests that judicial reforms face significant challenges, as the incentives for change may not align with broader national progress and the delivery of timely justice.</p>
-                    <p>This documentation is shared in the hope that it may contribute to understanding and inform those working toward meaningful change in the judicial system.</p>
+                    <p>This Indian Legal Entity Map visualizes the underlying network of relationships between courts, tribunals, regulatory bodies, and legal professionals in the Indian judicial system. It emerged from managing multiple cases across various courts for a financial institution's survival struggle, revealing the complex connections that shape how legal entities interact, including funding flows, appointment processes, and oversight mechanisms.</p>
+                    <p>The visualization documents the relationships between entities at both central and state levels, mapping how the judiciary connects with legislative bodies, executive agencies, and other institutions that influence its functioning and independence.</p>
                 </div>
             </div>
         </div>
@@ -199,5 +206,11 @@
     <script src="network-diagram.js?v=1"></script>
     <script src="main.js?v=1"></script>
     </div>
+    
+    <!-- Footer Credit -->
+    <footer class="d3lem-footer">
+        <p>Built with <a href="https://d3js.org/" target="_blank" rel="noopener noreferrer">D3.js</a> | 
+        Inspired by <a href="https://observablehq.com/@d3/mobile-patent-suits" target="_blank" rel="noopener noreferrer">Mobile Patent Suits</a> example</p>
+    </footer>
 </body>
 </html>
