@@ -201,10 +201,12 @@
     </div>
     
     <!-- Modular JavaScript files -->
-    <script src="data.js?v=1"></script>
-    <script src="helpers.js?v=1"></script>
-    <script src="network-diagram.js?v=1"></script>
-    <script src="main.js?v=1"></script>
+    <script src="data.js?v=1" defer></script>
+    <!-- Optional: local-only overrides, ignored by git -->
+    <script src="access-control.local.js" defer data-local-only onerror="console.info('No access-control.local.js overrides found (this is expected in public builds).')"></script>
+    <script src="helpers.js?v=1" defer></script>
+    <script src="network-diagram.js?v=1" defer></script>
+    <script src="main.js?v=1" defer></script>
     </div>
     
     <!-- Footer Credit -->

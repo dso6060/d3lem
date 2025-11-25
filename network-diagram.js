@@ -20,7 +20,10 @@ class LegalSystemVisualization {
         this.filteredEntityGroupId = null;
         this.filteredRelationshipId = null;
         this.filteredRelationshipGroupId = null;
+        this.lastAppliedFilterType = null; // Track which filter was most recently applied
         this.currentView = 'diagram';
+        this.hoveredElement = null; // Track currently hovered element
+        this.filterOpacityState = new Map(); // Store filter-based opacity for restoration
         this._labelsVisible = false; // Initialize label visibility flag
         this.isGrouped = false; // Track if nodes are currently grouped
         this.groupElements = null; // Store group circle elements
@@ -918,41 +921,96 @@ class LegalSystemVisualization {
 
     // Add interactivity to nodes and links
     addInteractivity() {
+        // No need to store filter opacity here - it's already stored in applyFilters()
+        // This function is kept for potential future use but not called
+
         this.nodeElements
             .on("mouseover", (event, d) => {
                 event.stopPropagation(); // Prevent bubbling to background
-                const selectedNode = this.svg.attr("data-selected-node");
-                if (!selectedNode) {
-                    this.showRelatedNodesOnHover(d);
-                }
-                // Always show tethered labels for this node's relationships on hover
+                this.hoveredElement = { type: 'node', data: d };
+                
+                // Only highlight the hovered node, preserve filter state for others
+                this.nodeElements
+                    .style("opacity", (node) => {
+                        if (node.id === d.id) {
+                            return 1; // Full opacity for hovered node
+                        }
+                        // Return to stored filter opacity for other nodes
+                        // If no filter state stored (no filters active), default to 1
+                        return this.filterOpacityState.get(node.id) !== undefined 
+                            ? this.filterOpacityState.get(node.id) 
+                            : 1;
+                    });
+                
+                // Highlight connected links
+                this.linkElements
+                    .style("opacity", (link) => {
+                        if (link.source.id === d.id || link.target.id === d.id) {
+                            return 1; // Full opacity for connected links
+                        }
+                        // Return to stored filter opacity for other links
+                        const linkId = `${link.source.id}-${link.target.id}-${link.label}`;
+                        return this.filterOpacityState.get(linkId) !== undefined 
+                            ? this.filterOpacityState.get(linkId) 
+                            : 1;
+                    });
+                
+                // Show tethered labels for this node's relationships on hover
                 this.showNodeRelationshipLabels(d);
             })
             .on("mouseout", (event, d) => {
                 event.stopPropagation(); // Prevent bubbling to background
-                const selectedNode = this.svg.attr("data-selected-node");
-                if (!selectedNode) {
-                    this.restoreNormalView();
-                    // Hide relationship labels when mouse leaves node with a small delay
-                    setTimeout(() => {
-                        this.hideRelationshipLabel();
-                    }, 100);
-                }
+                this.hoveredElement = null;
+                
+                // Restore filter state
+                this.restoreFilterState();
+                
+                // Hide relationship labels when mouse leaves node with a small delay
+                setTimeout(() => {
+                    this.hideRelationshipLabel();
+                }, 100);
+            })
+            .on("dblclick", (event, d) => {
+                event.stopPropagation(); // Prevent bubbling to background
+                // Double-click to reset all filters
+                this.clearAllFilters();
             })
             .on("click", (event, d) => {
                 event.stopPropagation(); // Prevent bubbling to background
-                if (this.filteredNodeId) {
-                    this.clearNodeFilter();
-                }
+                // Single click behavior can remain for other purposes if needed
             });
 
         this.linkElements
             .on("mouseover", (event, d) => {
                 event.stopPropagation(); // Prevent bubbling to background
-                const selectedNode = this.svg.attr("data-selected-node");
-                if (!selectedNode) {
-                    this.showRelatedNodesOnHover(d.source);
-                }
+                this.hoveredElement = { type: 'link', data: d };
+                
+                // Only highlight the hovered link and its connected nodes, preserve filter state for others
+                this.linkElements
+                    .style("opacity", (link) => {
+                        if (link === d) {
+                            return 1; // Full opacity for hovered link
+                        }
+                        // Return to stored filter opacity for other links
+                        const linkId = `${link.source.id}-${link.target.id}-${link.label}`;
+                        return this.filterOpacityState.get(linkId) !== undefined 
+                            ? this.filterOpacityState.get(linkId) 
+                            : 1;
+                    });
+                
+                // Highlight connected nodes
+                this.nodeElements
+                    .style("opacity", (node) => {
+                        if (node.id === d.source.id || node.id === d.target.id) {
+                            return 1; // Full opacity for connected nodes
+                        }
+                        // Return to stored filter opacity for other nodes
+                        return this.filterOpacityState.get(node.id) !== undefined 
+                            ? this.filterOpacityState.get(node.id) 
+                            : 1;
+                    });
+                
+                // Enhance hovered link appearance
                 d3.select(event.currentTarget)
                     .transition()
                     .duration(200)
@@ -966,10 +1024,12 @@ class LegalSystemVisualization {
             })
             .on("mouseout", (event, d) => {
                 event.stopPropagation(); // Prevent bubbling to background
-                const selectedNode = this.svg.attr("data-selected-node");
-                if (!selectedNode) {
-                    this.restoreNormalView();
-                }
+                this.hoveredElement = null;
+                
+                // Restore filter state
+                this.restoreFilterState();
+                
+                // Restore link stroke width
                 d3.select(event.currentTarget)
                     .transition()
                     .duration(200)
@@ -978,6 +1038,15 @@ class LegalSystemVisualization {
                 
                 // Hide the arrow relationship label
                 this.svg.selectAll(".arrow-relationship-label").remove();
+            });
+        
+        // Add double-click handler to SVG background to reset filters
+        this.svg
+            .on("dblclick", (event) => {
+                // Only reset if clicking on background (not on nodes/links)
+                if (event.target === this.svg.node() || event.target.tagName === 'svg') {
+                    this.clearAllFilters();
+                }
             });
     }
 
@@ -1004,6 +1073,16 @@ class LegalSystemVisualization {
         
         setTimeout(() => {
             diagramView.classList.add("active");
+            
+            // Reapply filters first to restore filter state before transitions
+            // This ensures the correct opacity is set based on active filters
+            if (this.filteredNodeId || this.filteredEntityGroupId || this.filteredRelationshipId || this.filteredRelationshipGroupId) {
+                this.applyFilters();
+            } else {
+                // If no filters, set all to full opacity
+                this.nodeElements.style("opacity", 1);
+                this.linkElements.style("opacity", 1);
+            }
             
             this.nodeElements
                 .each(function(d, i) {
@@ -1037,15 +1116,12 @@ class LegalSystemVisualization {
                 .transition()
                 .duration(800)
                 .delay((d, i) => i * 100)
-                .style("opacity", 1)
                 .attr("transform", d => `translate(${d.x}, ${d.y})`);
             
             this.linkElements
                 .transition()
                 .duration(800)
-                .delay(400)
-                .style("opacity", 1);
-            
+                .delay(400);
             
             this.simulation.on("tick", () => this.ticked());
             this.simulation.alpha(1).restart();
@@ -1055,6 +1131,11 @@ class LegalSystemVisualization {
                 toggleBtn.disabled = false;
                 this.isAnimating = false;
                 this.currentView = 'diagram';
+                
+                // Ensure filters are still applied after simulation stabilizes
+                if (this.filteredNodeId || this.filteredEntityGroupId || this.filteredRelationshipId || this.filteredRelationshipGroupId) {
+                    this.applyFilters();
+                }
                 
                 // Optimize label positions after simulation stabilizes
                 setTimeout(() => {
@@ -1842,6 +1923,7 @@ class LegalSystemVisualization {
     // Apply node filter
     applyNodeFilter(nodeId) {
         this.filteredNodeId = nodeId;
+        this.lastAppliedFilterType = 'node';
         
         // Apply filters (handles both node and relationship filters)
         this.applyFilters();
@@ -1865,6 +1947,7 @@ class LegalSystemVisualization {
     applyRelationshipFilter(relationshipId) {
         // Trim whitespace to ensure exact match
         this.filteredRelationshipId = relationshipId ? relationshipId.trim() : null;
+        this.lastAppliedFilterType = 'relationship';
         
         // Apply filtering to nodes and links
         this.applyFilters();
@@ -1876,6 +1959,10 @@ class LegalSystemVisualization {
     // Clear relationship filter
     clearRelationshipFilter() {
         this.filteredRelationshipId = null;
+        // Reset lastAppliedFilterType if this was the most recent filter
+        if (this.lastAppliedFilterType === 'relationship') {
+            this.lastAppliedFilterType = null;
+        }
         
         // Reapply remaining filters
         this.applyFilters();
@@ -1903,6 +1990,7 @@ class LegalSystemVisualization {
         if (!value) {
             this.filteredEntityGroupId = null;
             this.filteredRelationshipGroupId = null;
+            this.lastAppliedFilterType = null;
             this.applyFilters();
             this.setupTable();
             return;
@@ -1912,9 +2000,11 @@ class LegalSystemVisualization {
         if (value.startsWith('entity:')) {
             this.filteredEntityGroupId = value.substring(7); // Remove 'entity:' prefix (7 chars)
             this.filteredRelationshipGroupId = null;
+            this.lastAppliedFilterType = 'entityGroup';
         } else if (value.startsWith('relationship:')) {
             this.filteredRelationshipGroupId = value.substring(13); // Remove 'relationship:' prefix (13 chars)
             this.filteredEntityGroupId = null;
+            this.lastAppliedFilterType = 'relationshipGroup';
         }
         
         // Apply filtering to nodes and links
@@ -1928,6 +2018,10 @@ class LegalSystemVisualization {
     clearGroupFilter() {
         this.filteredEntityGroupId = null;
         this.filteredRelationshipGroupId = null;
+        // Reset lastAppliedFilterType if this was the most recent filter
+        if (this.lastAppliedFilterType === 'entityGroup' || this.lastAppliedFilterType === 'relationshipGroup') {
+            this.lastAppliedFilterType = null;
+        }
         
         // Reapply remaining filters
         this.applyFilters();
@@ -1942,12 +2036,74 @@ class LegalSystemVisualization {
         this.setupTable();
     }
 
+    // Reset previous filters, keeping only the most recently applied filter
+    resetPreviousFilters() {
+        // Keep the most recently applied filter, reset all others
+        if (this.lastAppliedFilterType === 'node') {
+            // Keep node filter, reset others
+            this.filteredEntityGroupId = null;
+            this.filteredRelationshipId = null;
+            this.filteredRelationshipGroupId = null;
+            
+            // Reset dropdowns for other filters
+            const groupFilter = document.getElementById("groupFilter");
+            if (groupFilter) {
+                groupFilter.value = "";
+            }
+            document.getElementById("relationshipFilter").value = "";
+        } else if (this.lastAppliedFilterType === 'relationship') {
+            // Keep relationship filter, reset others
+            this.filteredNodeId = null;
+            this.filteredEntityGroupId = null;
+            this.filteredRelationshipGroupId = null;
+            
+            // Reset dropdowns for other filters
+            document.getElementById("nodeFilter").value = "";
+            const groupFilter = document.getElementById("groupFilter");
+            if (groupFilter) {
+                groupFilter.value = "";
+            }
+        } else if (this.lastAppliedFilterType === 'entityGroup') {
+            // Keep entity group filter, reset others
+            this.filteredNodeId = null;
+            this.filteredRelationshipId = null;
+            this.filteredRelationshipGroupId = null;
+            
+            // Reset dropdowns for other filters
+            document.getElementById("nodeFilter").value = "";
+            document.getElementById("relationshipFilter").value = "";
+        } else if (this.lastAppliedFilterType === 'relationshipGroup') {
+            // Keep relationship group filter, reset others
+            this.filteredNodeId = null;
+            this.filteredEntityGroupId = null;
+            this.filteredRelationshipId = null;
+            
+            // Reset dropdowns for other filters
+            document.getElementById("nodeFilter").value = "";
+            document.getElementById("relationshipFilter").value = "";
+        } else {
+            // No recent filter tracked, reset all
+            this.clearAllFilters();
+            return;
+        }
+        
+        // Reapply the remaining filter
+        this.applyFilters();
+        
+        // Update table
+        this.setupTable();
+    }
+
     // Clear all filters (both node and relationship)
     clearAllFilters() {
         this.filteredNodeId = null;
         this.filteredEntityGroupId = null;
         this.filteredRelationshipId = null;
         this.filteredRelationshipGroupId = null;
+        this.lastAppliedFilterType = null;
+        
+        // Clear stored filter opacity state
+        this.filterOpacityState.clear();
         
         // Reset all nodes and links to full opacity
         this.nodeElements?.style("opacity", 1);
@@ -1995,74 +2151,10 @@ class LegalSystemVisualization {
             });
         }
         
-        // If node filter is active, use node filtering logic
-        if (this.filteredNodeId) {
-            const selectedNode = this.nodeElements.data().find(d => d.id === this.filteredNodeId);
-            if (selectedNode) {
-                this.highlightSelectedNode(selectedNode);
-            }
-            
-            // Filter nodes by connection to selected node
-            this.nodeElements?.style("opacity", d => {
-                const isConnected = this.judicialEntityMapData.some(link => {
-                    const matchesNode = (link.source === this.filteredNodeId && link.target === d.id) ||
-                                      (link.target === this.filteredNodeId && link.source === d.id);
-                    const matchesRel = matchesRelationship(link.label, this.filteredRelationshipId);
-                    const matchesRelGroup = matchesRelationshipGroup(link.label);
-                    const matchesEntityGroup = !this.filteredEntityGroupId || 
-                        entitiesInGroup.has(link.source) || entitiesInGroup.has(link.target);
-                    return matchesNode && matchesRel && matchesRelGroup && matchesEntityGroup;
-                });
-                return isConnected ? 1 : 0.2;
-            });
-            
-            // Filter links by node and relationship
-            this.linkElements?.style("opacity", d => {
-                const matchesNode = (d.source.id === this.filteredNodeId || d.target.id === this.filteredNodeId);
-                const matchesRel = matchesRelationship(d.label, this.filteredRelationshipId);
-                const matchesRelGroup = matchesRelationshipGroup(d.label);
-                const matchesEntityGroup = !this.filteredEntityGroupId || 
-                    entitiesInGroup.has(d.source.id) || entitiesInGroup.has(d.target.id);
-                return matchesNode && matchesRel && matchesRelGroup && matchesEntityGroup ? 1 : 0.2;
-            });
-            
-            // Show relationship labels for filtered node
-            if (this.currentView === 'diagram') {
-                setTimeout(() => {
-                    this.showFilteredNodeLabels(this.filteredNodeId);
-                }, 200);
-            }
-        } else if (this.filteredEntityGroupId) {
-            // Entity group filter is active
-            // Filter nodes that are in the selected group
-            this.nodeElements?.style("opacity", d => {
-                const inGroup = entitiesInGroup.has(d.id);
-                if (!inGroup) return 0.2;
-                
-                // Also check relationship filters if active
-                if (this.filteredRelationshipId || this.filteredRelationshipGroupId) {
-                    const hasMatchingLink = this.judicialEntityMapData.some(link => {
-                        const matchesNode = link.source === d.id || link.target === d.id;
-                        const matchesRel = matchesRelationship(link.label, this.filteredRelationshipId);
-                        const matchesRelGroup = matchesRelationshipGroup(link.label);
-                        return matchesNode && matchesRel && matchesRelGroup;
-                    });
-                    return hasMatchingLink ? 1 : 0.2;
-                }
-                return 1;
-            });
-            
-            // Filter links by entity group and relationship filters
-            this.linkElements?.style("opacity", d => {
-                const matchesEntityGroup = entitiesInGroup.has(d.source.id) || entitiesInGroup.has(d.target.id);
-                const matchesRel = matchesRelationship(d.label, this.filteredRelationshipId);
-                const matchesRelGroup = matchesRelationshipGroup(d.label);
-                return matchesEntityGroup && matchesRel && matchesRelGroup ? 1 : 0.2;
-            });
-        } else if (this.filteredRelationshipId || this.filteredRelationshipGroupId) {
-            // Only relationship filter is active
-            // Filter nodes that are part of relationships with the selected type
-            const nodesInFilteredRelationships = new Set();
+        // Collect all nodes that should be visible based on relationship filters
+        // This includes all endpoints of matching relationships
+        const nodesInFilteredRelationships = new Set();
+        if (this.filteredRelationshipId || this.filteredRelationshipGroupId) {
             this.judicialEntityMapData.forEach(link => {
                 const matchesRel = matchesRelationship(link.label, this.filteredRelationshipId);
                 const matchesRelGroup = matchesRelationshipGroup(link.label);
@@ -2071,27 +2163,137 @@ class LegalSystemVisualization {
                     nodesInFilteredRelationships.add(link.target);
                 }
             });
+        }
+        
+        // Highlight selected node if node filter is active
+        if (this.filteredNodeId) {
+            const selectedNode = this.nodeElements.data().find(d => d.id === this.filteredNodeId);
+            if (selectedNode) {
+                this.highlightSelectedNode(selectedNode);
+            }
+        }
+        
+        // Helper function to check if a node matches all active filters
+        const nodeMatchesFilters = (nodeId) => {
+            // Check node filter (if active)
+            let matchesNodeFilter = true;
+            if (this.filteredNodeId) {
+                // The selected node itself always matches the node filter
+                if (nodeId === this.filteredNodeId) {
+                    matchesNodeFilter = true;
+                } else {
+                    // Other nodes must be connected to the selected node through a link that matches all other filters
+                    matchesNodeFilter = this.judicialEntityMapData.some(link => {
+                        const isConnected = (link.source === this.filteredNodeId && link.target === nodeId) ||
+                                          (link.target === this.filteredNodeId && link.source === nodeId);
+                        if (!isConnected) return false;
+                        
+                        // Check relationship filters
+                        const matchesRel = matchesRelationship(link.label, this.filteredRelationshipId);
+                        const matchesRelGroup = matchesRelationshipGroup(link.label);
+                        
+                        // Check entity group filter
+                        const matchesEntityGroup = !this.filteredEntityGroupId || 
+                            entitiesInGroup.has(link.source) || entitiesInGroup.has(link.target);
+                        
+                        return matchesRel && matchesRelGroup && matchesEntityGroup;
+                    });
+                }
+            }
             
-            this.nodeElements?.style("opacity", d => {
-                return nodesInFilteredRelationships.has(d.id) ? 1 : 0.2;
+            // Check entity group filter (if active)
+            let matchesEntityGroupFilter = true;
+            if (this.filteredEntityGroupId) {
+                matchesEntityGroupFilter = entitiesInGroup.has(nodeId);
+            }
+            
+            // Check relationship filter (if active)
+            let matchesRelationshipFilter = true;
+            if (this.filteredRelationshipId || this.filteredRelationshipGroupId) {
+                // Node must be an endpoint of a matching relationship
+                matchesRelationshipFilter = nodesInFilteredRelationships.has(nodeId);
+            }
+            
+            // Node is visible if it matches all active filters
+            return matchesNodeFilter && matchesEntityGroupFilter && matchesRelationshipFilter;
+        };
+        
+        // Check if any nodes will be visible before applying filters
+        let hasVisibleNodes = false;
+        if (this.nodeElements && (this.filteredNodeId || this.filteredEntityGroupId || this.filteredRelationshipId || this.filteredRelationshipGroupId)) {
+            this.nodeElements.each(function(d) {
+                if (nodeMatchesFilters(d.id)) {
+                    hasVisibleNodes = true;
+                }
             });
             
-            // Filter links by relationship type
-            this.linkElements?.style("opacity", d => {
+            // If no nodes are visible and filters are active, reset previous filters but keep the most recent one
+            if (!hasVisibleNodes) {
+                console.warn('Filter combination resulted in empty results. Resetting previous filters, keeping most recent filter.');
+                this.resetPreviousFilters();
+                return; // Exit early since filters are adjusted
+            }
+        }
+        
+        // Unified filtering logic: evaluate all active filters together
+        // A node is visible if it matches ALL active filter criteria
+        // Clear stored opacity state when filters are reapplied
+        this.filterOpacityState.clear();
+        
+        this.nodeElements?.style("opacity", d => {
+            const isVisible = nodeMatchesFilters(d.id);
+            const opacity = isVisible ? 1 : 0.2;
+            // Store opacity for hover restoration
+            this.filterOpacityState.set(d.id, opacity);
+            return opacity;
+        });
+        
+        // Filter links: a link is visible if it matches ALL active filter criteria
+        this.linkElements?.style("opacity", d => {
+            // Check node filter (if active)
+            let matchesNodeFilter = true;
+            if (this.filteredNodeId) {
+                matchesNodeFilter = (d.source.id === this.filteredNodeId || d.target.id === this.filteredNodeId);
+            }
+            
+            // Check entity group filter (if active)
+            let matchesEntityGroupFilter = true;
+            if (this.filteredEntityGroupId) {
+                matchesEntityGroupFilter = entitiesInGroup.has(d.source.id) || entitiesInGroup.has(d.target.id);
+            }
+            
+            // Check relationship filters (if active)
+            let matchesRelationshipFilter = true;
+            if (this.filteredRelationshipId || this.filteredRelationshipGroupId) {
                 const matchesRel = matchesRelationship(d.label, this.filteredRelationshipId);
                 const matchesRelGroup = matchesRelationshipGroup(d.label);
-                return matchesRel && matchesRelGroup ? 1 : 0.2;
-            });
-        } else {
-            // No filters active
-            this.nodeElements?.style("opacity", 1);
-            this.linkElements?.style("opacity", 1);
+                matchesRelationshipFilter = matchesRel && matchesRelGroup;
+            }
+            
+            // Link is visible if it matches all active filters
+            const isVisible = matchesNodeFilter && matchesEntityGroupFilter && matchesRelationshipFilter;
+            const opacity = isVisible ? 1 : 0.2;
+            // Store opacity for hover restoration
+            const linkId = `${d.source.id}-${d.target.id}-${d.label}`;
+            this.filterOpacityState.set(linkId, opacity);
+            return opacity;
+        });
+        
+        // Show relationship labels for filtered node
+        if (this.filteredNodeId && this.currentView === 'diagram') {
+            setTimeout(() => {
+                this.showFilteredNodeLabels(this.filteredNodeId);
+            }, 200);
         }
     }
 
     // Clear node filter (kept for backward compatibility, now calls clearAllFilters)
     clearNodeFilter() {
         this.filteredNodeId = null;
+        // Reset lastAppliedFilterType if this was the most recent filter
+        if (this.lastAppliedFilterType === 'node') {
+            this.lastAppliedFilterType = null;
+        }
         
         // Reapply remaining filters
         this.applyFilters();
@@ -3304,13 +3506,44 @@ class LegalSystemVisualization {
             .style("opacity", d => connectedNodeIds.has(d.source.id) && connectedNodeIds.has(d.target.id) ? 1 : 0.2);
     }
 
-    restoreNormalView() {
-        // Don't restore if a filter is active
-        if (this.filteredNodeId) {
+    // Restore filter state after hover ends
+    restoreFilterState() {
+        // Only restore if we have stored filter state (filters are active)
+        if (this.filterOpacityState.size === 0) {
+            // No filters active, restore to full opacity
+            this.nodeElements.style("opacity", 1);
+            this.linkElements.style("opacity", 1);
             return;
         }
         
-        // Restore all nodes opacity and styling
+        // Restore nodes to their filter-based opacity
+        this.nodeElements
+            .style("opacity", (d) => {
+                return this.filterOpacityState.get(d.id) !== undefined 
+                    ? this.filterOpacityState.get(d.id) 
+                    : 1;
+            });
+        
+        // Restore links to their filter-based opacity
+        this.linkElements
+            .style("opacity", (d) => {
+                const linkId = `${d.source.id}-${d.target.id}-${d.label}`;
+                return this.filterOpacityState.get(linkId) !== undefined 
+                    ? this.filterOpacityState.get(linkId) 
+                    : 1;
+            });
+        
+        // DO NOT clear stored opacity state - keep it for future hovers
+    }
+
+    restoreNormalView() {
+        // Don't restore if a filter is active - use restoreFilterState instead
+        if (this.filteredNodeId || this.filteredEntityGroupId || this.filteredRelationshipId || this.filteredRelationshipGroupId) {
+            this.restoreFilterState();
+            return;
+        }
+        
+        // Restore all nodes opacity and styling (only when no filters active)
         this.nodeElements
             .transition()
             .duration(200)

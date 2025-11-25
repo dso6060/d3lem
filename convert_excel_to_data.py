@@ -146,10 +146,41 @@ const colorMap = {
 
 // Access control configuration
 const accessControlConfig = {
-    // Password intentionally omitted before pushing to remote. Set locally to enable edit mode.
+    password: "",  // Password/PIN for edit access (empty string to disable, set to enable)
     ipWhitelist: [],  // Array of allowed IP addresses (for future use)
     enableIPCheck: false  // Boolean flag to enable IP checking (false for now)
 };
+
+function applyAccessControlOverrides(overrides) {
+    if (!overrides || typeof overrides !== "object") {
+        return;
+    }
+
+    if (typeof overrides.password === "string") {
+        accessControlConfig.password = overrides.password;
+    }
+
+    if (Array.isArray(overrides.ipWhitelist)) {
+        accessControlConfig.ipWhitelist = overrides.ipWhitelist;
+    }
+
+    if (typeof overrides.enableIPCheck === "boolean") {
+        accessControlConfig.enableIPCheck = overrides.enableIPCheck;
+    }
+
+    if (typeof window !== 'undefined' && window.data) {
+        window.data.accessControlConfig = accessControlConfig;
+    }
+}
+
+if (typeof window !== 'undefined') {
+    window.applyAccessControlOverrides = applyAccessControlOverrides;
+
+    if (window.pendingAccessControlOverrides) {
+        applyAccessControlOverrides(window.pendingAccessControlOverrides);
+        delete window.pendingAccessControlOverrides;
+    }
+}
 
 // Export data for use in other modules
 if (typeof module !== 'undefined' && module.exports) {

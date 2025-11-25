@@ -11,7 +11,14 @@ An interactive D3.js force-directed network that visualizes how India’s consti
    - **Hover** to highlight a node’s inbound/outbound connections plus tooltip labels.
    - **Filter** by entity, relationship type, or entity/relationship group to reduce clutter.
    - **Toggle views** (arrow map ↔ table) with the “Show Table View” button.
-   - **Edit/Export**: unlock edits with the password prompt (see `data.js` → `accessControlConfig`) and download the current data to Excel from the table view.
+   - **Edit/Export**: unlock edits with the password prompt (configure via `access-control.local.js` → `applyAccessControlOverrides`) and download the current data to Excel from the table view.
+
+### Keep the edit-table password out of git
+
+1. Copy `access-control.local.example.js` to `access-control.local.js`.
+2. Replace the placeholder password/IP settings with your real values.
+3. The new file is already listed in `.gitignore`, so your credentials never end up in a commit or on GitHub.
+4. When deploying, ship your `access-control.local.js` alongside the rest of the static assets so the browser can load the overrides at runtime.
 
 ---
 
@@ -38,7 +45,7 @@ An interactive D3.js force-directed network that visualizes how India’s consti
   - *Relationship filter*: shows only relationships that match a label (e.g., “appoints”, “funds”).
   - *Group filter*: switch between entity clusters (Judiciary, Legislative & Regulatory, etc.) or relationship groupings (Funding, Oversights, Appointments, Governance, Accountability, Establishment, Operations, Hierarchy, Directives).
 - **Table view**: presents the same dataset in tabular form for quick scanning, editing, or export. The table honors active filters.
-- **Editing workflow** (optional): click **Edit Table**, enter the access password defined in `data.js`, and use the inline controls to modify relationships. Changes stay in memory until saved/exported.
+- **Editing workflow** (optional): click **Edit Table**, enter the access password defined in your local `access-control.local.js`, and use the inline controls to modify relationships. Changes stay in memory until saved/exported.
 
 ---
 
@@ -75,7 +82,7 @@ Arrowheads still communicate flow from source → target, but color is now seman
 - `judicialEntityMapData`: the primary edge list. Each object includes `source`, `target`, `label`, `count`, and optional `isProcessFlow` flag for dotted connectors.
 - `config`: width/height, node radius, force settings, and overall simulation behavior.
 - `colorMap`: retained for backwards compatibility (used when exporting simple data-only bundles) but arrows in the UI now derive their colors from `groupColors` / `relationshipGroupColors`.
-- `accessControlConfig`: password + IP whitelist toggle for enabling edit mode on shared deployments.
+- `accessControlConfig`: password + IP whitelist toggle for enabling edit mode on shared deployments. The repository ships with an empty password; configure yours via `access-control.local.js` (gitignored) or on your hosting environment before going live.
 
 To add/modify nodes or relationships, update `data.js` and reload the page. No build step is required.
 
