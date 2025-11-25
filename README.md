@@ -1,6 +1,8 @@
 # D3.js Legal Entity Map
 
-An interactive D3.js force-directed network that visualizes how India’s constitutional actors, courts, tribunals, professional bodies, and citizens connect through appointments, funding, oversight, and operational relationships. This repository powers the **d3lem** experience shown in `index.html`.
+An interactive D3.js force-directed network that visualizes how India's constitutional actors, courts, tribunals, professional bodies, and citizens connect through appointments, funding, oversight, and operational relationships. This repository powers the **d3lem** experience shown in `index.html`.
+
+**🌐 Live Version:** [https://friedso.com/apps/d3lem/](https://friedso.com/apps/d3lem/)
 
 ---
 
